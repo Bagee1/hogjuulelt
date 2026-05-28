@@ -1,0 +1,401 @@
+ICSI486 Software Construction
+Week 12
+Containerization
+& Docker
+Into the Cloud
+Instructor
+Batnyam Battulga, Ph.D.
+Department of Information & Computer Science
+
+Previous Session
+Review – Week 11
+What we learned last week
+Clean Code practices for Web Apps
+Implemented DTOs (Data Transfer Objects) and robust server-side Validation.
+Terminal
+➜LibraryWebgit status
+Security fundamentals
+On branch main
+Covered OWASP Top 10, SQL Injection (SQLi) prevention, and XSS defenses. Your branch is up to date.
+➜LibraryWeb./mvnw clean verify
+[INFO] Scanning for projects...
+Safe error handling & logging [INFO] BUILD SUCCESS
+Established professional logging practices and secure exception management.
+Solid Foundation
+Project 2 Kickoff Ready for deployment
+Started building the "LibraryWeb" Monolith architecture.
+ICSI486 Software Construction 2
+
+Lecture Goals
+Learning Objectives
+What you will learn today
+The Deployment Problem
+Understand why "It works on my machine" is an anti-pattern and the need for consistent environments.
+Virtual Machines vs. Containers
+Differentiate between hardware virtualization (VMs) and OS-level virtualization (Containers).
+Target Outcome
+Docker Fundamentals
+Master the core concepts: Docker Images, Containers, and the Docker Engine architecture.
+Solve deployment conflicts
+Ship "LibraryWeb" confidently
+Infrastructure as Code
+Prepare for Cloud/AWS
+Learn to automate environment setup by writing a Dockerfile for Java/Tomcat applications.
+Skill Level: Advanced
+Port Mapping & Volumes
+Connect containers to the outside world and manage persistent data storage effectively.
+ICSI486 Software Construction 3
+
+Current Challenge
+The
+Deployment
+"It works on my machine!"
+Problem
+Java 17, Tomcat 10, Windows
+Why "It works on my machine" is not a valid excuse in Java 11, Tomcat 9, macOS production.
+CRASH: ClassNotFoundException
+Environmental mismatch is the #1 cause of deployment failures.
+Week 13: Containerization & Docker
+
+System Conflict
+The Matrix Application 1 Application 2
+Legacy Web Service Modern API of Hell Node.js v14 Java v17
+PostgreSQL v12 MySQL v8
+Redis
+Why managing dependencies on a single host is a nightmare.
+Complexity Multiplies
+Every new application brings a unique set of languages, libraries, and database requirements.
+Host Server (OS: Linux)
+Incompatible Coexistence
+App A needs Java 8. App B needs Java 17. Installing one often Global Binaries Conflict breaks the other on a shared OS.
+Node v14 Java 17 Postgres MySQL Redis Java 11-
+> Error: Library version mismatch. /usr/lib/ conflicting shared libraries
+> Aborting deployment...
+
+Concept Metaphor
+The Shipping
+Container Analogy
+How logistics solved the problem of incompatibility.
+Pre-1950s: Chaos
+After: Standard Interface
+Cargo was manual (sacks, barrels, boxes). Loading was slow, error-prone, and required custom handling for every ship.
+ID: WEB-01 ID: DB-02 ID: CACHE-03
+The Solution: Standardization
+A standard metal box. Cranes, ships, and trucks don't care what's inside (cars, coffee, computers). They only care about the box. Java App MySQL Redis Infrastructure (OS / Cloud) handles the Standard Box, > Docker does for software what not the contents.
+> shipping containers did for logistics.
+
+Traditional Architecture
+Virtual Machines (The Old Way)
+Hardware virtualization and isolation
+Hypervisor-Based
+Type 2 Hypervisor Stack
+Runs on top of a Hypervisor (like VMware or VirtualBox) which manages the physical hardware resources.
+App A App B
+Bins/Libs Bins/Libs
+Full Guest OS
+Guest OS Guest OS
+Each VM contains a complete Guest Operating System (e.g., Ubuntu ~20GB), (Heavy) (Heavy) duplicating kernels and drivers.
+Hypervisor
+Heavy & Resource Intensive
+Infrastructure / Hardware
+Slow to boot (minutes vs ms) and wastes significant CPU/RAM just to keep the
+Guest OS running.
+Note how "Guest OS" is duplicated for every app
+ICSI486 Software Construction 7
+
+Modern Architecture
+Containers (The Modern Way)
+OS-Level Virtualization
+Run on the Docker Engine
+Container Architecture
+Replaces the heavy Hypervisor. The engine manages containers efficiently.
+App A App B App C
+Share the Host OS Kernel
+Docker Engine
+No duplicate Operating Systems. All containers leverage the same Linux kernel.
+Host OS
+No Guest OS required
+Infrastructure
+Only the App and its exact dependencies (bins/libs) are packaged inside.
+Lightweight & Efficient
+Start time: ~50ms Size: ~MBs (not GBs)
+Boots in milliseconds, occupies minimal disk space, and maximizes hardware usage.
+ICSI486 Software Construction 8
+
+Architectural Shift
+Comparison Summary
+Virtual Machines Containers
+The Old Way The Modern Way
+Hardware Visualization OS Visualization
+Simulates a complete computer. Runs on a Hypervisor. Simulates the user-space. Runs on Docker Engine. Shares Host Kernel.
+VS
+Heavy & Slow Lightweight & Fast
+Includes full Guest OS (GBs). Boots in minutes. Resource intensive. Only App + Deps (MBs). Boots in milliseconds. Efficient.
+Strong Isolation Portable
+Completely separate kernel and OS. High security boundary. "Build once, run anywhere." Standardized packaging.
+Pro Tip:They are often used together! In the cloud, we run Docker containers insidelarge Virtual Machines.
+
+Core Architecture
+Docker Core Concepts
+Understanding the lifecycle: Build, Ship, Run
+1. Dockerfile Build 2. Image Run 3. Container
+The Recipe The Baked Cake Eating the Cake
+FROM tomcat:10 library-web:v1 Running
+COPY ./app.war
+PID: 4821 • Port: 8080
+CMD ["run"]
+An executable package including code, runtime, libraries, and settings. It is A running instance of an image. Isolated A simple text file containing instructions. It immutable(read-only). from the host. You can start many defines the source code for your containers from one image.
+infrastructure.
+Analogy: You write the recipe once, bake the cake once, but can serve many slices. 10
+
+Public Registry
+Docker Hub
+The "App Store" for Container Images
+The "GitHub" of Images hub.docker.com/search-q=tomcat
+A centralized cloud registry (hub.docker.com) where developers find, store, and share container images.
+Top Search Result tomcat
+Official Images
+Official Image
+Curated base images for almost everything: postgres, nginx, tomcat, openjdk.
+Apache Tomcat is an open source implementation of the Java Servlet, JavaServer Pages...
+10.1 jdk17 latest
+Don't Reinvent the Wheel
+1B+ Downloads Updated 2 hrs ago
+Instead of installing OS + Java + Tomcat manually, simply start FROM tomcat:10.1-jdk17.
+Trusted Sources
+Security & Maintenance
+Start secure, build fast.
+Official images are maintained by experts, scanned for vulnerabilities, and updated frequently.
+ICSI486 Software Construction 11
+
+Core Concepts
+The Dockerfile
+Infrastructure as Code (IaC)
+Infrastructure as Code
+Replaces manual server configuration with scriptable, executable code. Dockerfile
+1 FROM tomcat:10-jdk17
+2
+Specific Naming Convention
+3 # Set working dir
+A text file named exactly Dockerfile(no file extension). 4 WORKDIR /app
+5
+6 COPY . /target/app.war .
+7
+The Build Recipe 8 CMD["catalina.sh", "run"]
+Defines step-by-step instructions to assemble your custom Image.
+The "Recipe"
+Version Controlled Blueprint for your server
+Reproducible builds that live in your Git repository alongside source code.
+ICSI486 Software Construction 12
+
+Infrastructure as Code
+Dockerfile: FROM & WORKDIR
+Setting the foundation for your container image
+Base Image Selection vim Dockerfile FROM
+Every Dockerfile starts here. We are inheriting a pre-configured
+1 # Select Base Image environment containing Tomcat 10running on Java 17. We don't need to install Java manually!
+2 FROM tomcat:10.1-jdk17
+3
+4 WORKDIR /usr/local/tomcat/webapps/ Set Working Directory
+WORKDIR
+5
+Like the cd command. It sets the context for all future commands. We switch to Tomcat's default web application folder so our files land in the right place.
+Docker instructions are case-insensitive, but UPPERCASE is convention. 13
+
+Building the Image
+Dockerfile: COPY
+Injecting your compiled application into the container vim Dockerfile
+Host to Container target/libraryweb.war
+This command takes the compiled Java application (WAR file) from
+6 your laptop's file system (the "Host") and duplicates it inside the container's file system. It bridges the gap between your development environment and the isolated container.
+7 # Copy compiled WAR to container
+8 COPY target/libraryweb.war ./ROOT.war
+9 |
+The ROOT.war Trick
+./ROOT.war
+By renaming the file to ROOT.warduring the copy, Tomcat automatically serves it at the root URL /(e.g., localhost:8080) instead of requiring a sub-path like /libraryweb.
+Tip: Use .dockerignoreto prevent copying unnecessary files (like target/classes) to the build context. 14
+
+Runtime Configuration
+Dockerfile: EXPOSE & CMD
+Defining network visibility and startup behavior vim Dockerfile
+Documentation Only
+EXPOSE
+6 # Document listening port This tells users: "This container listens on port 8080."Crucially, it does not publishthe port to the host. You still need to map it with -p at runtime.
+7 EXPOSE8080
+8
+9 # Default startup command Execution Entrypoint
+CMD
+10 CMD["catalina.sh", "run"]
+The default command executed when the container starts. Since we use the official Tomcat base image, this is already defined for us, but stating it explicitly improves clarity.
+Important: Only the lastCMD instruction in a Dockerfile takes effect. 15
+
+LibraryWeb Project
+The Complete Tomcat Dockerfile
+Putting it all together: A reproducible server recipe vim Dockerfile
+Clean Slate Policy
+1 # Use official Tomcat image with Java 17
+2 FROM tomcat:10.1-jdk17 We run rm -rf ...to remove default Tomcat welcome pages. This prevents attackers from identifying our server 3 version and keeps the container clean.
+4 # Clear default apps (security best practice)
+5 RUN rm -rf /usr/local/tomcat/webapps/*
+6 Deployment Strategy
+7 # Copy compiled WAR to root context Renaming your app to ROOT.warensures it loads at localhost:8080/instead of localhost:8080/libraryweb/.
+8 COPY target/libraryweb.war /usr/local/tomcat/webapps/ROOT.war
+9
+Result: Lightweight & Fast
+10 EXPOSE8080
+This 5-line script replaces pages of manual installation
+11 documentation. It guarantees that the server environment is identical for every developer.
+Pro Tip: Always pin specific versions (e.g., tomcat:10.1) instead of using 'latest'.
+16
+
+Building the Artifact
+Command: docker build
+Turning your text recipe into an executable image
+Tagging the Image
+-t libraryweb-img user@dev:~/libraryweb Assigns a readable name (and optionally a version tag like :v1). Without this, you'd have to refer to the image by a random hash ID.
+➜~dockerbuild-tlibraryweb-img .
+[+] Building 0.2s (6/6) FINISHED The Build Context
+.
+Crucial! The dot tells Docker: "Look in the current directoryfor the Dockerfile and any files (like the .war) you => CACHED [1/3] FROM tomcat:10.1-jdk17 want to copy." => CACHED [2/3] WORKDIR /usr/local/tomcat/webapps/ => [3/3] COPY target/libraryweb.war ./ROOT.war Layer Caching => exporting to image CACHED => naming to docker.io/library/libraryweb-img Docker executes steps line-by-line. If a line hasn't changed since the last build, it reuses the cached result. This makes rebuilds instant!
+Pro Tip: Put frequently changing instructions (like COPY source code) at the bottom to maximize cache hits.
+17
+
+Execution
+Run the Container
+Bringing your Docker image to life
+Detached Mode
+-d
+Runs the container in the background. Without this flag, your terminal would be "stuck" inside the container's log stream until you pressed zsh Ctrl+C.
+1 docker run \
+2 -d \ Port Mapping
+-p host:container
+3 -p 8080:8080 \
+Punches a hole through the container's isolation. It maps port 8080 on
+4 --name my-library \ your laptop (Host) to port 8080 inside the Tomcat container.
+5 libraryweb-img
+6
+Container Name
+--name
+Assigns a human-readable name like my-library. Otherwise, Docker assigns a random name like keen_darwin, making it hard to stop later.
+Tip: Use docker psafterwards to verify it's running. 18
+
+Port Mapping Explained
+Connecting Containers to the World
+Network Isolation Practical Examples
+Theory & Concepts Usage Scenarios
+Invisible by Default Standard Mapping
+-p 8080:8080
+Containers are completely isolated. A service running on port 8080 inside is invisible to your laptop.
+Access via http://localhost:8080. Direct 1-to-1 mapping.
+Punching a Hole
+Port Redirection
+You must explicitly open a connection through the container's "firewall" to -p 9000:8080 allow external traffic in.
+Access via http://localhost:9000. Useful if port 8080 is already busy on your laptop.
+The Syntax
+The logic is always: Host Port : Container Port. (Left side = Your No Mapping-
+Laptop, Right side = Inside Container).
+(no flag)
+The app runs, but you cannotaccess it from the browser. It remains locked inside.
+Concept Check:Think of it like an apartment building. The apartment number (container port) is standard, but the doorbell code (host port) can be anything.
+
+Critical Concept
+The
+Ephemeral
+Container Restart
+Nature docker rm my-container
+Safe (In Image)
+Containers are stateless and disposable by design.
+Treat them as cattle, not pets.
+DESTROYED / LOST
+Deleting a container deletes ALL internal data.
+DESTROYED / LOST
+Embedded databases (H2 file) will be wiped on restart.
+Week 12: Containerization & Docker
+
+Data Persistence
+Docker Volumes
+Saving data beyond the container's lifecycle
+The Volume Flag (-v) bash
+-v host_path:container_path
+1 # Mount host folder to container This creates a direct link ("mount") between your laptop's filesystem and the container. The container thinks it's writing to its own internal folder, but it's actually writing to your hard drive.
+2 docker run -d \
+3 --name library-db \
+4 -v/my/local/data:/var/lib/mysql \
+Data Survival
+5 mysql:8.0
+Persistence
+6
+Without volumes, if you delete a container, its data is gone forever.
+With volumes, the data survives! This is critical for databasesand user uploads.
+Warning: H2 Database in-memory mode will still lose data on restart. 21
+
+Configuration Management
+Environment Variables
+Injecting configuration at runtime without changing code bash & java Runtime Injection
+-e FLAG
+1 # 1. Inject config when running The -eflag passes variables into the container environment. This keeps secrets (passwords, API keys) out of your Dockerfile and source code.
+2 docker run –e DB_USER=admin \
+3 -e DB_PASS=secret123 ...
+4
+Standard Java API
+5 // 2. Read config in Java
+System.getenv()
+6 String user = System.getenv("DB_USER");
+Your Java code doesn't change! It simply asks the OS for the value.
+This enables the "Build Once, Run Anywhere"philosophy: use the exact same image for Dev, Test, and Prod.
+For sensitive data in production, use Docker Secrets or Kubernetes Secrets instead of plain text vars. 22
+
+Essential Commands
+Managing Containers
+Cheat Sheet
+Debug with Logs
+List Containers Stop Container
+$ docker logs -f my-library
+$ docker ps (-a for all) $ docker stop my-library
+Shows currently running containers. Use -ato see Gracefully stops the container (sends SIGTERM). This is your primary debugging tool! It streams the stopped ones too. Give it a few seconds to shut down. "console output" (stdout/stderr) from inside the container to your terminal.
+View Java stack traces
+See Tomcat startup errors
+-ffollows the log live
+Remove Image
+Remove Container
+$ docker rmi libraryweb-img
+$ docker rm my-library
+Pro Tip: Pruning
+Deletes a stopped container. Add -fto force delete Deletes the baked image from your disk to free up $ docker system prune a running one (dangerous!). space. Containers using it must be removed first.
+The "Nuclear Option": Cleans up all stopped containers, unused networks, and dangling images in one go. Great for disk space!
+Tab completion works for container names in most shells! 23
+
+Future Outlook
+The Cloud Horizon
+Why Docker is the language of modern cloud computing
+AWS Elastic Container Service (ECS)
+Deploy containers directly to Amazon's massive infrastructure without managing servers.
+Google Cloud Run Build Once, Run Anywhere
+Serverless container deployment that scales to zero when not in use, paying only for milliseconds used. Your local Docker container is identical to what runs on a massive server cluster. This parity eliminates "works on my machine" bugs forever.
+Kubernetes (K8s)
+Local Laptop Production Cloud
+The industry standard for orchestrating thousands of containers across clusters of machines.
+Universal Standard
+Infinite Scalability
+The container is the new unit of computing
+"If you can Dockerize it, you can scale it." Native support on every major cloud platform.
+ICSI486 Software Construction 24
+
+Lecture 13 Conclusion
+Q&A & Lab Mission
+ICSI486 Software Construction
+Dockerize "LibraryWeb"
+Lab 13 Mission
+Your goal is to package the LibraryWeb Monolith into a portable container image that runs on any machine with Docker installed.
+Deliverables
+Stretch Goals (Bonus)
+Dockerfile for Tomcat + WAR
+Data Persistence:Mount a volume so H2
+Any Questions-
+Screenshot of docker build success database files survive container restarts.
+Screenshot of browser accessing
+Clarifications on Images, Containers, Config:Pass DB credentials via -e localhost:8080 or the Dockerfile syntax- environment variables.
+Brief README.md with commands
+Next Week
+CI/CD Pipelines & Automation bbattulga@university.edu Office Hours: Thursdays 2-4 PM 25

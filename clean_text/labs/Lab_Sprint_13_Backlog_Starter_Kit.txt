@@ -1,0 +1,51 @@
+Sprint 13 Backlog: Dockerize the Monolith
+Epic: As a DevOps Engineer, I need to containerize the "LibraryWeb or Your Project" application using Docker so that it can be reliably deployed to any environment without manual Tomcat installation.
+User Stories & Acceptance Criteria
+User Story 1: Install & Verify Docker
+As a developer, I want to have Docker Desktop running on my local machine.
+• [ ] Docker Desktop is installed and running (Windows/Mac) or Docker Engine (Linux).
+• [ ] Running docker --version in the terminal returns the installed version.
+• [ ] Running docker run hello-world successfully pulls the test image and prints the success message.
+User Story 2: Compile the WAR File
+As a developer, I want to ensure my project compiles into a clean .war artifact before containerization.
+• [ ] Ensure your pom.xml has <packaging>war</packaging>.
+• [ ] Run mvn clean package (or use your IDE's Maven tool) to generate libraryweb.war or your_project inside the target/ directory.
+User Story 3: Write the Dockerfile
+As an infrastructure engineer, I want to write a Dockerfile that sets up Tomcat and deploys our App.
+• [ ] Create a file named Dockerfile in the root of your project directory (next to pom.xml).
+• [ ] Use tomcat:10.1-jdk17 (or match your local JDK version) as the base image.
+• [ ] Add the COPY command to move the .war file from the target/ folder into the container's webapps/ROOT.war directory.
+User Story 4: Build & Run the Container
+As a system administrator, I want to build the Docker image and start the container with the correct port mapping.
+• [ ] Execute the build command: docker build -t libraryweb-img .
+
+• [ ] Run the container detached, mapping port 8080 to your host: docker run -d -p 8080:8080 --name library-server libraryweb-img • [ ] Verify success by opening http://localhost:8080 in an incognito browser. You should see your application running!
+User Story 5 (Bonus/Advanced): Database Volume
+As a database administrator, I want my H2 file database to survive a container restart.
+• [ ] Modify your application's JDBC URL to point to a specific folder (e.g., jdbc:h2:file:/app/db/librarydb).
+• [ ] Run the container with a volume flag to mount a local directory to /app/db in the container: docker run -d -p 8080:8080 -v /path/to/local/folder:/app/db -- name library-server libraryweb-img • [ ] Restart the container and verify that previously created books are still there.
+Starter Code Snippets
+1. The Dockerfile
+Dockerfile
+# 1. Base Image: Tomcat 10 with Java 17
+FROM tomcat:10.1-jdk17
+# 2. Maintainer info (Optional but good practice)
+LABEL maintainer="your.email@university.edu"
+LABEL app="LibraryWeb"
+# 3. Remove default Tomcat apps to keep the server clean
+RUN rm -rf /usr/local/tomcat/webapps/*
+# 4. Copy the compiled WAR file to the Tomcat deployment folder
+# Renaming it to ROOT.war makes it the default app at localhost:8080/
+COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
+# 5. Expose the port
+EXPOSE 8080
+# 6. Start Tomcat (Optional, base image already does this)
+CMD ["catalina.sh", "run"]
+2. Maven check in pom.xml (Ensure this is present before running mvn clean package) XML <groupId>com.university</groupId> <artifactId>libraryweb</artifactId> <version>1.0-SNAPSHOT</version> <packaging>war</packaging> ``` ---
+
+### Definition of Done (DoD): The "It Works Anywhere" Check
+Show the following to your Agile Coach (Instructor):
+1. Show your running container in the terminal using `docker ps`.
+2. Stop your local IDE server (e.g., IntelliJ Tomcat runner) completely.
+3. Access `http://localhost:8080` in the browser and log in successfully to prove the Docker container is serving the app.
+4. Run `docker stop library-server` and show that the website immediately goes offline.

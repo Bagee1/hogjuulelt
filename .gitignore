@@ -1,0 +1,32 @@
+# Build output
+**/target/
+**/build/
+*.class
+*.jar
+*.war
+
+# Local tools and dependency caches
+**/.tools/
+**/.m2/
+**/m/
+
+# Runtime and environment files
+.env
+**/.env
+*.log
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Original lecture/lab binary materials are kept locally only.
+/lectures/
+/labs/

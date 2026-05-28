@@ -1,0 +1,32 @@
+Sprint 12 & Project 1 Backlog:
+"LibraryWeb" Monolith
+Epic: As a team of Software Engineers, we need to build the "LibraryWeb" Monolith integrating all concepts from Week 1 to 12. It must be secure, well-architected (Hexagonal), and expose both a Web UI and a REST API.
+Project Requirements & Acceptance Criteria
+Category 1: Architecture & Core (30%)
+The heart of the system must remain pure and independent.
+• [ ] Hexagonal Strictness: The core package contains NO imports from jakarta.servlet.*, java.sql.*, or com.fasterxml.jackson.*.
+• [ ] Domain Model: Contains at least Book (id, title, author, isbn, isAvailable) and User (id, username, password, role).
+• [ ] Ports: Proper interfaces defined in core.port.primary (e.g., LibraryUseCase) and core.port.secondary (e.g., BookRepository).
+Category 2: Data Persistence (JDBC)
+The system must remember data across server restarts.
+• [ ] H2 Database: A relational schema is created via SQL scripts on startup.
+• [ ] Secondary Adapter: A JdbcBookRepository implements the BookRepository interface using PreparedStatement to prevent SQL Injection.
+Category 3: Security & State Management (20%)
+The system must protect user data and restrict access.
+• [ ] AuthN: A Login JSP and LoginServlet exist. Passwords can be hardcoded for the demo, but session creation via JSESSIONID must work.
+• [ ] AuthZ (The Bouncer): The Dashboard and API mutating routes (POST/DELETE) are protected. Unauthenticated users are redirected to /login or get a 401 Unauthorized API response.
+• [ ] XSS Protection: All JSP pages displaying user input use <c:out> from the JSTL library to escape HTML characters.
+Category 4: The Primary Adapters (UI & API) (30%)
+The system must serve both humans and machines.
+
+• [ ] Web UI (JSP): Provide an HTML interface to List all books, Add a new book, and Delete a book. Use Post-Redirect-Get pattern.
+• [ ] REST API (JSON): Provide a BookApiServlet that handles:
+- GET /api/books -> Returns 200 OK with JSON array.
+- POST /api/books -> Accepts JSON body, creates book, returns 201 Created. • [ ] DTOs: The REST API must map the internal Book domain object to a BookDTO before serializing it to JSON. Category 5: Code Quality & Error Handling (20%) The code must be maintainable and fail gracefully. • [ ] No Stacktraces: A global <error-page> is configured in web.xml to catch unhandled 500 errors and display a friendly UI. • [ ] Validation: Server-side validation ensures no Book can be created with a blank title or null author. Returns a 400 Bad Request or an error message in the UI. Starter Setup & Git Instructions
+1. Repository: One student creates the GitHub repository and invites the other as a Collaborator.
+2. Branching Strategy: - main: Only contains stable, working code.
+- feature/core-logic: Branch for the domain.
+- feature/jdbc-adapter: Branch for database connection.
+- feature/web-ui: Branch for JSP/Servlets.
+- feature/rest-api: Branch for API/Jackson.
+3. Submission: Provide the link to your GitHub repository and a short README.md containing instructions on how to start the Tomcat server and access the H2 console.

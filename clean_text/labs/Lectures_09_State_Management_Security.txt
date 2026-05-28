@@ -1,0 +1,470 @@
+Software Construction
+Department of Computer Science
+ICSI486 Spring Semester 2026
+Week 09
+State Management &
+Security
+Sessions, Cookies & The Login Flow
+Instructor
+Learning Objectives
+Understand why State Management is necessary in
+Be able to identify the topics and goals of the week. web applications.
+Understand how sessions contribute to the login system.
+
+Where are we in the architecture-
+Software Construction
+ICSI486
+Week 09: State Management
+The Primary Adapter
+01
+Stateless Protocol
+Focus: The Web Adapter
+Responsible for translating external HTTP requests into internal domain commands. It isolates the core from web-specific Web Adapter technologies.
+HTTP Handling
+Application Core
+HTTP / HSTTePsSsion Mgmt Domain Model Dealing with Limitations
+Use Cases
+Security
+HTTP is stateless by design.
+Bridging the gap between a stateless protocol and stateful business rules.
+Learning Objectives
+Explain the role of the Web Adapter in Describe the separation between Core and Map HTTP requests to the specific user Hexagonal Architecture. Adapter. context.
+
+The Problem: HTTP is Stateless
+Software Construction
+ICSI486
+Week 09: State Management
+Core Limitation
+HTTP has no memory.
+The server forgets everything about the user immediately after sending a response.
+Cycle 1 Cycle 2
+GET /home GET /profile
+User Server User Server
+Response: 200 OK Response: Who are you- "Here is the home page." "I don't know who this request is from." Learning Objectives Explain the principle of HTTP Recognize the impact on user flows. Identify relevance for security-critical statelessness. applications.
+Conclusion: Each request-response cycle is completely independent.
+
+The Shopping Cart Dilemma
+Software Construction
+ICSI486
+Week 09: State Management
+How do we remember items without a database- (Historical Workarounds)
+Workaround 1 Workaround 2
+Hidden Form Fields URL Rewriting
+Passing state inside the HTML form itself, invisible to the user UI Appending state data directly to the URL query parameters for but present in the DOM. every link.
+<!-- HTML Form -->
+<form action="/checkout">
+<input type="hidden" name="cart_total" .../checkout-user=batbold&item=book value="100.00" > </form> Technique Technique Embed state in type="hidden". Append -key=value to links.
+Unsecure Easily Manipulated Hard to Maintain
+User can simply edit the HTML/URL to change price from 100 to 1!
+LSeeanrnt ivniga OPObjSeTc trievqeusest. Sent via GET request.
+List historical workarounds for state Evaluate risks of Hidden Fields and URL Justify the need for robust state management. Rewriting. management solutions.
+Why are these dangerous-
+
+The Client-Side Solution: Cookies
+Software Construction
+ICSI486
+Week 09: State Management
+Cookies give the web memory.
+State Mechanism
+Small text files stored in the browser that are automatically exchanged with the server.
+Step 1: First Visit Step 2: Subsequent Requests
+Response 200 OK GET /profile
+Server Browser Browser Server
+HTTP Response Header HTTP Request Header
+HTTP/1.1 200 OK GET /profile HTTP/1.1
+Set-Cookie: user=batbold Host: www.example.com
+Content-Type: text/html Cookie: user=batbold
+Browser saves this file! Sent automatically!
+Learning Objectives
+Describe how cookies work (browser Understand the Set-Cookie Header -> Recognize use cases and automatic storage). Cookie Request flow. exchange.
+
+Software Construction Limitations of Cookies
+ICSI486
+Week 09: State Management
+Size Limits
+Security Risks
+Technical Constraints
+Client-Side Vulnerabilities
+Small Capacity
+Data is Visible
+Maximum size is only ~4KB per cookie. Users (and attackers) can read cookie contents effortlessly.
+Quantity Limit
+Data is Mutable
+Browsers limit the number of cookies per domain
+Users can modify cookie values using browser (e.g., 20-50).
+DevTools.
+Security Rule #1
+NevDeo Nro t Sstotreore sensitive dDoa Ntota Sto rien a raw cookie!
+Passwords, Credit Cards Business Logic Flags (isAdmin)
+Learning Objectives
+Identify technical limits of cookies (size, Explain security risks (manipulation, Classify sensitive data correctly (never quantity). readability). store in plain text).
+
+The Server-Side Solution: HttpSession
+Software Construction
+ICSI486
+Week 09: State Management
+Keep the State on the Server.
+Secure Architecture
+Instead of sending data back and forth, we only exchange a reference ID.
+Client Side Server Side
+Tomcat Memory
+The Browser
+HttpSession Object
+HTTP Request
+Cookie
+Key (ID) Value (Data)
+ID
+JSESSIONID=F9A2B...
+F9A2B... User: Batbold Cart: [Book]
+Contains only a random ID. No shopping cart data, no user details.
+Learning Objectives
+Explain the concept of server-side
+Understand the separation between Classify the advantages over pure client- sessions. session ID and session data. side solutions.
+
+The JSESSIONID
+Software Construction
+ICSI486
+Week 09: State Management
+Tomcat's default Session Cookie.
+Session Tracking Mechanism
+A unique identifier assigned to a specific user session to maintain state across multiple requests.
+The Technical View The Analogy
+Your Coat
+HTTP Header
+Cloakroom Ticket
+Cookie: JSESSIONID=F9A2B3C4...
+Ticket #42 User Data
+Generated automatically by the Servlet Container (Tomcat). (JSESSIONID) (Stored on Server) Contains NO data, just a random ID string.
+Sent back by browser on every request. "You hold the ticket (ID), the cloakroom staff holds the jacket (Data). If you lose the ticket, you lose access to the jacket." Learning Objectives Identify the role of the JSESSIONID in Tomcat. Explain the analogy of the Cloakroom Ticket.
+Understand why the ID must be random and unpredictable.
+
+Working with Sessions in Servlets
+Software Construction
+ICSI486
+Week 09: State Management request.getSession()
+MyServlet.java 1
+This single method handles the heavy lifting. It
+1 // Inside your HttpServlet method checks the request headers for a Cookie:
+2 public void doGet(HttpServletRequest req, JSESSIONID=...
+3 HttpServletResponse resp) {
+4 // THE MAGIC LINE: Ask Tomcat for the session
+Scenario A: Cookie Found
+5 HttpSession session = req.getSession();
+6 // Check if this is a fresh session Tomcat finds the matching session in RAM and returns it.
+7 if (session.isNew()) { "Ah, it's you again!"
+8 Stringid = session.getId();
+9 System.out.println("Welcome: " + id);
+10 } else { Scenario B: No Cookie
+11 System.out.println("Welcome back!");
+Tomcat creates a blank HttpSession object
+12 } and generates a new random JSESSIONID.
+13 }
+Learning Objectives
+Correctly apply the request.getSession() Understand when a session is Explain the session lifecycle in the Servlet method. automatically created. context.
+
+Storing & Retrieving Data
+Software Construction
+ICSI486
+Week 09: State Management
+SessionDemoServlet.java
+Think "HashMap"
+1 Protected void doGet(HttpServletRequest req, 2 HttpServletResponse resp) { The session is essentially a HashMap<String, Object> that persists across multiple requests.
+3 HttpSession session = req.getSession();
+4 // 1. STORE (Write) - Like a Map<String, Object>
+5 User currentUser = new User("Batbold", "admin");
+6 session.setAttribute("loggedInUser", currentUser);
+Storage (setAttribute)
+7 // 2. RETRIEVE (Read) - Returns 'Object'
+Keys are Strings (e.g., "cart", "user"). Values can be any
+8 Object raw = session.getAttribute("loggedInUser");
+Java Object.
+9 if (raw != null) {
+10 // 3. CAST - Explicit casting is required!
+11 User u = (User) raw;
+Retrieval (getAttribute)
+12 System.out.println("Hello " + u.getName());
+Returns generic Object. You must cast it back to your
+13 } specific type (e.g., (User)) to use it.
+14 }
+Learning Objectives
+Securely store and retrieve data in the HttpSession. Understand why Type Casting is necessary during retrieval.
+Choose appropriate String keys for Session attributes.
+
+Security Concept: AuthN vs. AuthZ
+Software Construction
+ICSI486
+Week 09: State Management & Security
+Authentication Authorization
+AuthN AuthZ "Who are you-" "What can you do-"
+Verifying the identity of a user, device, or system. Ideally Determining the access rights and privileges of an done via credentials. authenticated user.
+// Batbold -> DELETE book
+User: "I am Batbold" if (user.role == 'ADMIN') {
+Pass: "secret123" allowAction();
+System: "Confirmed."
+}
+Mechanism Mechanism
+Login Form / MFA Permissions & Roles
+LearnFiinrsgt Objectives Then
+1 2 "You cannot authorize a ghost."
+Authentication Authorization
+Clearly distinguish between Authentication
+Name examples of permissions and roles. Understand the order: AuthN before AuthZ. and Authorization.
+
+The Request Phase
+The Login Flow (Step 1)
+Software Construction
+ICSI486 Delivering the Login Form to the User
+Week 09: State Management
+STEP 1
+VIEW
+SERVER login.jsp
+Action
+Controller
+Requests Page
+LoginServlet
+GET /login Determine View
+Protocol Detail
+This is just a request for the UI. No credentials (username/password) are sent in this step.
+Credentials will be sent in the subsequent POST request.
+Learning Objectives
+Identify the GET /login endpoint and its Understand the delivery of the HTML form Understand why sensitive data is never sent purpose. (View). via GET.
+
+The POST Request Phase
+The Login Flow (Step 2)
+Software Construction
+ICSI486 Submitting Credentials to the Server
+Week 09: State Management
+STEP 2 SERVER LOGIC
+User Action Controller
+Extraction
+Submits Form LoginServlet request.getParameter("user");
+POST /login request.getParameter("pass");
+@Override doPost(...) user=batbold&pass=***
+Security Note
+Unlike GET, the POST request carries data in the HTTP Body. This keeps credentials out of the browser history and URL bar, but it is not encrypted unless we use HTTPS!
+Learning Objectives
+Understand the data flow during POST
+Use the method Recognize the separation between
+/login (Browser → Server). request.getParameter() to extract data. Servlet (Controller) and HTML (View).
+
+The Validation Phase
+The Login Flow (Step 3)
+Software Construction
+ICSI486
+Verifying Credentials against the Database Week 09: State Management & Security CONTROLLER MODEL LOGIC Verify Process Input DB Query Compare Strings LoginServlet UserRepository if (in.equals(store)) Extracts username & password findByUsername(u) Security Reality Check In a real-world application, never store passwords in plain text. You must use strong hashing algorithms (like Argon2 or BCrypt). For this academic lab, we focus on the session mechanism, so we use plain text for simplicity.
+Learning Objectives
+Load the user from the database using Conceptually understand the password
+Understand the significance of password
+UserRepository. comparison (Input vs. DB). hashing in real-world production systems.
+
+The Login Flow (Step 4)
+Software Construction
+ICSI486
+Week 09: State Management
+LoginServlet.java (doPost) The Session Phase if (isValidUser) {
+// 1. Create/Get Session & Store User Establishing Identity & Redirecting
+HttpSession session = request.getSession(); session.setAttribute("loggedInUser", user); // 2. Redirect to Dashboard response.sendRedirect("/dashboard"); ACTION } STATE CHANGE RESPONSE Server Memory PRG Pattern Transition Store User Object 302 Redirect Anonymous Logged In session.setAttribute(...) Identity Established Location: /dashboard Learning Objectives Explain the state transition from Store user in session and Determine the destination route anonymous to logged in. implement PRG pattern. after a successful login.
+
+The Login Flow (Step 5 - Failure)
+Software Construction
+ICSI486
+Week 09: State Management
+Handling Invalid Credentials
+Authentication Failed Scenario
+Database ACTION RESPONSE
+CHECK
+Password Check
+State Mgmt
+NO Session Created login.jsp-error=true
+INVALID
+Do NOT set attributes
+Servlet Logic JSP View Logic
+<c:if test="${param.error}"> if (!passwordMatch) {
+<div class="alert alert-danger">
+// Do NOT create session!
+Login failed! response.sendRedirect("/login.jsp-error=true");
+</div> return;
+</c:if>
+}
+Learning Objectives
+Handle failed logins correctly (Security Do not create session attributes if Control feedback via Redirect and Query Best Practice). credentials are invalid. Parameters (-error=true).
+
+Software Construction The Bouncer Pattern
+ICSI486
+Week 09: State Management & Security
+Protecting Secured Routes
+Security Pattern
+Every protected Servlet (e.g., /dashboard, /deleteBook) must check if the user is logged in before executing business logic.
+Hacker Authorized User
+GET /dashboard GET /dashboard
+No Session (Anonymous) Has JSESSIONID
+Access Denied Access Granted
+Redirect: /login Execute Business Logic "Please log in first." Show dashboard data, allow edits, etc.
+Learning Objectives
+Recognize the need for protecting routes.
+Enforce login status checks before executing business logic.
+Identify examples of protected endpoints.
+
+Implementing the Bouncer (Servlet)
+Software Construction
+ICSI486
+Week 09: State Management & Security
+DashboardServlet.java Check the ID
+We look into the HttpSession map. If the key
+1 Protected void doGet(HttpServletRequest req, "loggedInUser" is missing or null, the user is 2 HttpServletResponseresp) { anonymous.
+3 // 1. Retrieve the session
+4 HttpSession session = req.getSession();
+Redirect (HTTP 302)
+5 // 2. THE BOUNCER CHECK: Is user present-
+6 if (session.getAttribute("loggedInUser") == null) { sendRedirect tells the browser to go to /login. It does 7 // 3. Redirect to Login Page not stop the code execution automatically!
+8 resp.sendRedirect("/login-error=unauthorized");
+9 return; // CRITICAL: Stop execution!
+10 } The Critical Return
+11 // 4. Safe Area: Execute Business Logic
+Always use return; after a redirect. Without it, the "Safe
+12 req.getRequestDispatcher("/dashboard.jsp").forward(req, Area" code (Line 14) would still run, causing errors.
+13 resp);
+14 }
+15
+Learning Objectives
+Implement the Bouncer check in the Servlet. Apply redirects securely and stop execution using return;.
+Use consistent attribute names for Session objects.
+
+Why repeat yourself- The "Filter" Alternative (Advanced)
+Software Construction
+Week 09: State Management & Security
+ICSI486
+Instead of adding the "Bouncer" check to every single
+Servlet, we can use a centralized gatekeeper. Request Flow with Filter
+Java Servlet Filters
+Implement the javax.servlet.Filter interface to intercept requests before they reach your logic.
+SecurityFilter checkSession() urlPatterns = "/admin/*"
+Automatic Protection
+Define URL patterns (e.g., /admin/*) to automatically protect entire sections of your app.
+DRY Principle Authorized No Session
+AdminServlet Login Page
+Don't Repeat Yourself. Write the security logic once, apply it everywhere.
+Learning Objectives
+Understand the purpose and application of Servlet Filters (Middleware).
+Define URL patterns (e.g., /admin/*) to automatically protect entire sections.
+Apply the DRY principle by implementing centralized security checks.
+
+JSTL & Sessions in the JSP
+Software Construction
+ICSI486
+Week 09: State Management & Security navbar.jsp
+1 sessionScope Object
+1 <%@taglibprefix="c“ uri="http://java.sun.com/jsp/jstl/core"%>
+2 <nav class="navbar"> JSTL gives you direct access to the HttpSession map. Writing ${sessionScope.user} is equivalent to 3 <!-- Always visible link --> calling session.getAttribute("user") in Java.
+4 <a href="/home">My App</a>
+5 <!-- CONDITION: Is User Logged In- -->
+2 Conditional Rendering
+6 <c:if test="${not empty sessionScope.loggedInUser}">
+7 <!-- Show only to authenticated users -->
+The view changes based on the state. We use
+8 <span>Welcome, ${sessionScope.loggedInUser.name}</span> <c:if> to check for existence (not empty).
+9 <a href="/logout" class="btn-red">Logout</a>
+Resulting UI States
+10 </c:if>
+11 <!-- CONDITION: Is User Anonymous- -->
+State: Logged In Welcome, Batbold Logout
+12 <c:if test="${empty sessionScope.loggedInUser}">
+13 <a href="/login">Login</a>
+14 </c:if>
+15 </nav>
+Learning Objectives
+Implement conditional rendering using JSTL (c:if).
+Correctly use sessionScope in JSP to access session attributes.
+Display UI elements (e.g., Logout button) dependent on the user's login status.
+
+Session Hijacking
+Software Construction
+ICSI486
+Week 09: State Management & Security
+The Interception The Impersonation
+Man-In-The-Middle Identity Theft
+Stealing the Ticket Cloning the Session
+If a connection is unencrypted (HTTP), hackers can sniff network The hacker copies the stolen ID into their own browser. traffic and read the JSESSIONID cookie.
+Server Deception
+Public WiFi Risk
+The server cannot distinguish the hacker from the victim. The
+Open networks (cafes, universities) are prime locations for this hacker becomes you. passive attack.
+Security Rule #2: Prevention
+Encrypt the Connection with HTTPS
+HTTPS
+Only
+SSL/TLS encryption makes the traffic unreadable to sniffers.
+Learning Objectives
+Explain the session hijacking attack scenario. Understand the consequences of a stolen JSESSIONID Justify HTTPS as the central countermeasure. cookie.
+
+Security: Cookie Flags
+Software Construction
+ICSI486
+Week 09: State Management & Security
+HttpOnly Secure
+XSS Protection Transport Protection
+Blocks JavaScript Access HTTPS Only
+Prevents document.cookie access in the browser. Browser will never send the cookie over an unencrypted HTTP connection.
+Mitigates XSS
+Prevents Sniffing
+Even if an attacker injects a script, they cannot steal the Session ID. Protects against Man-in-the-Middle attacks on public networks.
+Tomcat Configuration Best Practice
+Enable these flags globally in your web.xml:
+<cookie-config>
+<http-only>true</http-only>
+<secure>true</secure>
+</cookie-config>
+Learning Objectives
+Explain the significance of the HttpOnlyand Secureflags.
+Establish the connection to XSS (Cross-Site Scripting) and transport encryption.
+Identify server-side configuration (web.xml) as a best practice.
+
+Resource Management
+Session Expiration
+Software Construction
+ICSI486
+Week 09: State Management
+Sessions consume Server RAM.
+They cannot live forever. Without cleanup, inactive
+Default Behavior Tomcat sessions would eventually crash the server.
+The Cost of State 30
+Every active session occupies memory on the
+Minutes Session Destroyed server heap. 10,000 abandoned carts = significant wasted RAM. src/main/webapp/WEB-INF/web.xml Automatic Cleanup Tip: Setting this to -1 makes sessions never expire (Dangerous!).
+Tomcat automatically destroys sessions after
+<session-timeout>15</session-timeout> a specific period of inactivity (idle time).
+Learning Objectives
+Understand the reasons for session Know default values (30 min) and Estimate resource consumption of timeouts (RAM management). configuration in web.xml. inactive sessions.
+
+Software Construction Ending the Session The Logout Flow
+ICSI486
+Week 09: State Management
+Gracefully terminating user access and cleaning up server memory
+STEP 1 SERVER
+RESPONSE
+User Action LogoutServlet Outcome
+Clicks Logout Destroy Session Redirect (302)
+GET /logout session.invalidate(); Location: /login
+Security Best Practice
+Always use session.invalidate() instead of just removing attributes. This ensures the Session ID is completely revoked on the server side.
+Learning Objectives
+Correctly implement logout Plan user flow after logout (redirect Justify security through immediate (session.invalidate()). target). session termination.
+
+Software Construction Summary & Lab Mission
+ICSI486
+Week 09: State Management
+Key Takeaways
+HTTP is Stateless
+LAB MISSION 09
+Estimated: 90 min
+Sessions provide the necessary "memory" for our applications, bridging the gap between independent requests.
+Objective
+Build a Secure Login & Logout Flow
+JSESSIONID is the Key Create LoginServlet (GET & POST)
+The server stores the data; the client holds only the ID ticket.
+Implement UserRepository verification
+Security relies on protecting this ID.
+Protect Dashboard with Session Check
+Add Logout functionality
+The Bouncer Pattern
+Never trust a request blindly. Every protected route must verify the user's session status first. "Security is not a feature, it's a state of mind." Learning Objectives Summarize the key takeaways of the lecture. Clearly identify the to-dos for Lab 09.
+Apply security principles to your own application.

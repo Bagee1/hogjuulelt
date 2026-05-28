@@ -1,0 +1,19 @@
+Checklist: Acceptance Criteria for Sprint
+07 (Advanced CRUD & Defensive UI)
+User Story 1: Master-Detail Navigation
+As a user, I want to click a row in the table, and the text fields should automatically populate with the data from that row.
+• [ ] A ListSelectionListener is bound to the SelectionModel of the JTable.
+• [ ] Clicking on a row loads the Title and Score into the input fields.
+• [ ] CRITICAL (State Management): The ID of the clicked record is stored invisibly in a class variable (e.g., private Long selectedThesisId).
+• [ ] The text of the "Save" button visually changes to "Update" after the click.
+User Story 2: Defensive Delete
+As a user, I want to be able to delete a record, but be protected from accidental deletion by a confirmation dialog.
+• [ ] When "Delete" is clicked, a JOptionPane.showConfirmDialog appears asking "Really delete-".
+• [ ] If the user clicks "No" or "Cancel", nothing happens.
+• [ ] If the user clicks "Yes", the record is deleted via the service, the form is cleared, the selectedThesisId is set to null, and the table updates.
+User Story 3: Robust Saving & Exception Handling
+As a user, I expect the application not to crash upon invalid input, but to show me helpful warning messages instead.
+• [ ] The code inside the "Save/Update" button is fully wrapped in a try-catch block.
+• [ ] If no selectedThesisId is set, a new record is created (create). If it is set, an update (update) is executed.
+• [ ] The GUI specifically catches validation errors (e.g., IllegalArgumentException for empty titles originating from the Core) and displays a JOptionPane.showMessageDialog (WARNING_MESSAGE).
+• [ ] The GUI catches general errors (Exception or SQLException) and displays a red Error dialog (ERROR_MESSAGE).

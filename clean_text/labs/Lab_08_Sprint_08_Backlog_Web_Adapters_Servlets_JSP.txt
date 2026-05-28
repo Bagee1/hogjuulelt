@@ -1,0 +1,33 @@
+Lab 08 Sprint 08 Backlog: Web Adapters (Servlets & JSP)
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Epic: Replace the primary desktop adapter (Swing) with a stateless web adapter (Servlet & JSP).
+The Hexagonal System Core (Domain, Service, Repository, Factory) must remain 0% changed!
+User Stories & Acceptance Criteria
+User Story 1: Web Infrastructure & Dependencies
+As a developer, I want to prepare my project for web development so that I can run Java Servlets on a Tomcat server.
+• Acceptance Criteria:
+- [ ] The pom.xml has been updated with the jakarta.servlet-api dependency (Version 6.x or 5.x depending on your Tomcat version).
+- [ ] The scope of the Servlet API is strictly set to <scope>provided</scope> (since Tomcat provides these libraries at runtime).
+- [ ] The Tomcat server is configured in the IDE (Eclipse), and the project can be deployed without errors.
+User Story 2: The Controller (Servlet)
+As a user, I want to visit the URL http://localhost:8080/theses, prompting the system to load all theses from the database.
+• Acceptance Criteria:
+- [ ] A class named ThesisServlet has been created in the adapter.primary.web package and extends HttpServlet.
+- [ ] The class is annotated with @WebServlet("/theses").
+- [ ] The init() method retrieves the ThesisService (or Repository) via the existing RepositoryFactory (or ServiceFactory).
+- [ ] The doGet() method loads the list of theses, stores it as an attribute in the HttpServletRequest ("backpack"), and forwards the request to the JSP.
+
+User Story 3: The View (JSP & Java Records)
+As a user, I want to see the loaded data presented in a clean HTML table within my browser.
+• Acceptance Criteria:
+- [ ] A file named theses.jsp exists in the strictly protected folder src/main/webapp/WEB-INF/views/.
+- [ ] The JSP file contains pure HTML for the basic structure of the table.
+- [ ] The JSP extracts the list from the request attribute and iterates over the entries using a Java for-loop.
+- [ ] The data is rendered into the HTML using modern Java Record accessor methods (e.g., <%= t.title() %>).
+Definition of Done (DoD): The "Ultimate Web Test"
+To successfully close Sprint 08, demonstrate the following to your Teaching Assistant (TA):
+1. Start the Tomcat Server in your IDE.
+2. Open a standard web browser (Chrome/Firefox/Edge).
+3. Navigate to http://localhost:8080/theses (include the Application Context if necessary).
+4. Verify: You must see an HTML table displaying exactly the data you entered into your H2 database during Week 5 (via Console) or Weeks 6/7 (via Swing).
+5. Architecture Check: Show the TA that you did not have to change a single line of code in the entire core package!

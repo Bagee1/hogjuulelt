@@ -1,0 +1,305 @@
+N
+U
+M
+Software Construction
+ICSI486
+Web Adapters Part II
+The Full CRUD Lifecycle
+HTML Forms HTTP POST PRG Pattern Data Mutation
+Batnyam Battulga, Ph.D., Dipl.-Ing., Dipl.-Inf.
+National University of Mongolia
+Instructor Week 09
+
+N
+ICSI486 Software Construction
+U
+Learning Objectives
+M
+HTML Forms
+Understand how to build user interfaces for structured data entry.
+HTTP POST vs. GET
+Differentiate between methods for safe retrieval vs. state changes.
+Servlet doPost()
+Process incoming form data securely on the server side.
+PRG Pattern
+Implement Post/Redirect/Get to prevent duplicate form submissions.
+State Management
+Use hidden input fields and query parameters for Update/Delete actions.
+
+N
+U ICSI486 Software Construction
+M Recap - Where are we-
+Week 08: Primary Web Adapter
+We successfully attached a Primary Web Adapter, proving the Hexagonal Architecture works by swapping Swing for Web without changing the Core.
+Implemented: "Read" (The 'R')
+Our application is currently read-only. We can view the list of theses.
+Current Mechanism Flow
+1. Browser sends HTTP GET /theses
+2. Servlet doGet() fetches data from Service
+3. Servlet forwards data to theses.jsp
+Missing Components
+How do we complete the full lifecycle- We need to implement Create, Update, and Delete.
+
+N
+Topic 1 Web Adapters Part II
+U
+The "C" in CRUD - HTML Forms
+M
+HTML <form> Element
+The standard mechanism to collect user input. Think of it create_thesis.html as an envelope that packages data for the server.
+Key Attribute: action="..."
+Specifies the Target URL (e.g., /theses). This tells the browser whereto send the envelope.
+Key Attribute: method="..."
+Defines the HTTP Verb used for transport. For creating new data, we almost always use POST.
+Always use POST for state changes!
+
+N
+U Topic 1 Web Adapters Part II
+M Form Inputs & The name Attribute
+Input Elements form_example.html
+Standard tags like <input>, <textarea>, and <select>define the data fields the user can modify.
+The name Attribute
+CRITICAL!This is the key used by the server (Java Servlet) to identify and extract the data. Without this, the server receives nothing.
+The id Attribute
+Used primarily for CSS stylingand frontend JavaScript. The server generally ignores this attribute completely.
+Submit Button
+A button with type="submit" triggers the browser to package the data and send the HTTP request.
+
+N
+Concept Web Adapters Part II
+U
+HTTP GET vs. HTTP POST
+M
+HTTP GET HTTP POST
+Purpose Purpose
+Retrieving data Creating or Modifying data
+Safe & Idempotent Changes Server State
+Data Transport Data Transport
+VS
+Appended to the URL (Query String) Hidden inside HTTP Request Body
+Payload
+.../theses-title=AI&score=90 title: "AI Research" score: 90
+Visibility
+Visibility
+Visible in browser history, logs, and bookmarks. Never use for passwords! Secure. Not shown in URL bar. Not saved in browser history.
+
+N
+U Topic 2 The Controller
+M Processing POST Requests
+Routing Logic ThesisServlet.java
+When a form uses method="POST", the Tomcat server inspects the HTTP header. It bypasses doGet() entirely and routes the request to doPost().
+Servlet doPost() Method
+You must override this specific method in your Servlet class. It provides the HttpServletRequest object containing the body of the submitted form data.
+Security & Idempotency
+Unlike GET, doPost() is intended for non-idempotent actions—operations that change the server's state (Create, Update, Delete).
+
+N
+U Topic 2 Web Adapters Part II
+M Extracting Parameters request.getParameter()
+ThesisServlet.java
+The primary method to extract data sent from the browser. You pass the name attribute from your HTML input as the argument.
+Always Returns String
+Regardless of the HTML input type (even type="number"),
+HTTP transmits text. You will receive a String that may need parsing.
+Exact Match Required
+The string key you provide in Java must exactly match the name="..." value defined in your JSP/HTML file.
+Note: "thesisScore" returns "95", not 95 (int)
+
+N
+Topic 3 Data Integrity & Safety
+U
+M Data Type Conversion & Validation
+ThesisServlet.java
+Everything is Text
+The web is text-based. Even if you use <input type="number">, type="number">, the server receives a String. You must parse it manually.
+Manual Parsing
+Use wrapper classes to convert data types:
+Double.parseDouble() or Integer.parseInt().
+User Input is Evil!
+What if the user types "ABC" in a score field- Always wrap parsing logic in try-catch blocks to handle exceptions gracefully.
+
+N
+Warning Web Adapters Part II
+U
+The Double Submit Problem
+M
+The Scenario:
+User submits form (POST)
+1
+"Save Thesis"
+Server processes & forwards to Success JSP
+2
+Data saved to DB. Page renders.
+User presses F5 (Refresh)
+3
+Browser Refresh
+Browser asks: "Confirm Form Resubmission-" -> User clicks "Continue"
+(F5)
+The Dangerous Result:
+The browser re-sends the exact same POST request! A duplicate recordis created in the database (or worse, a payment is charged twice).
+
+N
+Pattern Web Adapters Part II
+U
+The Solution: Post-Redirect-Get (PRG)
+M
+1 2 3
+HTTP POST REDIRECT (302) HTTP GET
+Submission Instruction Retrieval
+Data arrives at Servlet Server sends 302 Found Browser reads Location doPost()executes Header: Location: /theses Makes newrequest Data saved to DB No HTML body sent! User sees updated list Why this works:
+The last request in the browser history is now the safe GET. If the user presses F5, they only reload the list—they do NOT resubmit the data!
+
+N
+Concept Web Adapters Part II
+U
+Forward vs. Redirect
+M
+.forward() .sendRedirect()
+Execution Execution
+Server-Side Only Client-Side Roundtrip
+Internal transfer of control Browser makes a NEW request
+URL Behavior URL Behavior
+Does NOTchange VS Updates to the NEWURL
+.../app/process User sees this .../app/success Updated
+Use Case Use Case
+Loading Views (JSPs) after a GET request. Transfers request attributes. Redirecting after a successful POST (PRG Pattern). Prevents double submit.
+
+N
+Concept Web Adapters Part II
+U
+The "U" in CRUD: Update Workflow
+M
+1 2 3 4
+Click "Edit" Pre-fill Form Modify & Submit Update DB
+GET Request Server Logic POST Request Persistence
+User selects a record Load Thesis #5 User changes data Servlet receives ID
+ID passed in URL: Inject values into input fields Clicks "Update" Executes SQL UPDATE
+-id=5
+Set Hidden ID field Sends new data + ID Redirects (PRG)
+The Challenge: Statelessness
+How does the server know whichrecord to update in Step 4- The browser forgets everything between requests. We must manually pass the IDthrough every step of this chain!
+
+N
+U Update (U) Web Adapters Part II
+M Step 1 - Passing the ID (GET)
+ThesisServlet.java
+URL Query Parameters 1 protected void doGet(HttpServletRequest req, ...) {
+2 // 1. Extract ID from URL (-id=5)
+The simplest way to pass specific identifiers in a GET
+3 String idStr = req.getParameter("id"); request. Parameters are appended to the URL after a question mark (-). 4 5 // 2. Parse & Load Data 6 try { 7 Long id = Long.parseLong(idStr); The HTML Link 8 Thesis thesis = service.getById(id); 9 In your list view (JSP), you generate a dynamic link for each record: 10 // 3. Pre-fill form view 11 req.setAttribute("thesis", thesis); 12 req.getRequestDispatcher("form.jsp") <a href="/edit-thesis-id=5">Edit</a> 13 .forward(req, resp); 14 } catch (Exception e) { ... } 15 }
+
+N
+Step 2 Web Adapters Part II
+U
+The Hidden Input Field
+M
+How do we send the ID without showing it-
+We use <input type="hidden">. It is invisible to the user in the browser UI, but its value (the Thesis ID) is packaged inside the HTTP POST body when the form is submitted.
+update_thesis.jsp
+2 <<ffoorrmmaction="/update-thesis"method="POST">
+3
+4 <!-- CRITICAL: Identify which record to update --> The Magic Trick
+The user sees the Title field, but the
+5 <inputtype="hidden"name="thesisId"value="<%= thesis.getId() %>"> >
+Server receives BOTH the Title and the ID.
+This connects the new data to the old
+6 record.
+7 <label>New Title: </label>
+8 <<iinnppuutttype="text"name="title"value="<%= thesis.getTitle() %>">
+9
+10 <<bbuuttttoonntype="submit">Update</button>
+
+N
+Step 3 Web Adapters Part II
+U
+Processing the Update (POST)
+M
+Closing the Loop on the Server
+The Servlet receives the form data via doPost. It extracts the hidden ID, performs the update logic, and finally issues a Redirect to complete the PRG pattern.
+ThesisServlet.java
+43 protected void doPost(HttpServletRequest req, HttpServletResponse resp) {
+44 // 1. Extract params (including hidden ID)
+45 String idStr = req. getParameter ("thesisId" );
+46 String title = req. getParameter ("title");
+47 // 2. Business Logic
+48 Long id = Long.parseLong (idStr);
+49 thesisService. updateThesis (id, title);
+The Loop is Complete!
+50 // 3. PRG Pattern (Redirect)
+By using sendRedirect, we force the
+51 resp.sendRedirect ("theses"); browser to discard the POST request and load the list fresh via GET. No double submits!
+
+N
+U ICSI486 Software Construction
+M The "D" in CRUD - Delete Concept
+Goal
+Remove a record from the database permanently.
+Mechanism
+We need to send the unique ID of the record to be deleted to the server.
+Critical Question
+Should we use a simple link like <a href="delete-id=5">(HTTP GET)-
+
+N
+Security Alert Web Adapters Part II - CRUD Operations
+U
+The Danger of GET for Deletion
+M
+Why is <a href="..."> dangerous-
+Search Engine Bots (Crawlers)
+Google bots follow every link on a page to index it. If you use GET links for deletion, the bot will delete your entire database!
+Browser Pre-fetching
+Modern browsers load links in the background to speed up navigation. The browser might trigger the delete URL delete URL automatically without the user clicking.
+NEVER use GET! Accidental Sharing
+Destructive Actions GET requests are visible in the URL. Users might copy/paste the link to a friend, causing the friend to unintentionally unintentionally delete the record.
+THE GOLDEN RULE:
+Always use HTTP POST(or DELETE in REST) for data removal.
+
+N
+Safety First Web Adapters Part II
+U
+Implementing Delete with POST
+M
+Why use a form for a button-
+We cannot use a simple <a> link because it creates a GET request. To delete safely, we must wrap the button in a mini-form to force a POSTrequest.
+thesis_list.jsp
+2 <form action="/delete-thesis"method="POST“ style="display:inline;">
+3 <input type="hidden"name="thesisId“ value="<%= thesis.getId() %>">
+4
+5 <button type="submit" UX Safety Net
+6 onclick="return confirm('Are you sure-');">
+The JavaScript confirm()function interrupts the submit process. If the user
+7 Delete clicks "Cancel", the form is never sent!
+8 </button>
+9 </form>
+
+N
+U ICSI486 Software Construction
+M Hexagonal Architecture Check
+The Verification Question
+Did we have to change anything in our Domain or Service logic to make the Web CRUD work-
+The Answer: NO
+The Core Logic remained completely isolated. It doesn't know (or care) that it is now being driven by a Web Adapter instead of Swing.
+Code Stability
+The ThesisService and JdbcThesisRepository classes remain exactly the same as they were for the Swing Desktop App.
+Ultimate Proof
+This demonstrates the power of Ports & Adapters. We successfully swapped the driving adapter (UI) without touching the Application Core.
+
+N
+Wrap Up Web Adapters Part II
+U
+Summary & Lab 09 Mission
+M
+Key Takeaways
+Lab 09 Goals
+State Changes = POST 1. Add Create Form
+Use HTML forms with method="POST" for all data modifications.
+Update theses.jspto include a form for adding new topics.
+PRG Pattern
+2. Implement doPost()
+Post-Redirect-Get solves the "Double Submit" problem and keeps
+Override the method in your Servlet to handle parameters, call browser history clean.
+the Service, and redirect.
+Safe Deletion
+3. Implement Delete
+Never use GET links for destructive actions. Use mini-formswith hidden IDs. Add "Delete" buttons to the table using mini-forms and handle the removal logic.
+Reminder: You must restart Tomcat after modifying Java Servlet code!

@@ -1,0 +1,159 @@
+Lab Tasks 3 and 4 (2 Weeks) – Complete Instructions
+This lab introduces you to clean software architecture (Clean Architecture / Ports & Adapters), testability, and the Dependency Inversion Principle (DIP). You will implement a
+small but complete use case with strict layering:
+• domain/ = core business logic (pure, independent)
+• ports/ = interfaces the application needs
+• app/ = use cases / application services (orchestration)
+• adapters/ = technical implementations (e.g., UUID, in-memory, file)
+Goal: a runnable solution with unit tests, optional ArchUnit rules, a clear package structure, and clean manual wiring (no framework required).
+0) Prerequisites
+• Java 17+
+• Maven (examples below assume Maven)
+• IDE (Eclipse)
+• JUnit 5
+Target project structure src/main/java/<base>/ app/ domain/ ports/ adapters/ src/test/java/<base>/ ( tests) <base> is your package prefix, e.g. mn.icsi486.thesis
+1) Problem statement (business)
+Build a mini application called “Thesis Submission”: students can submit a thesis. The system
+must:
+• generate a new thesis ID
+• validate inputs
+• store the submission
+• create an event/log entry (optional)
+Minimum data
+• title (must not be empty)
+
+• studentId (must not be empty)
+• submittedAt (timestamp)
+• thesisId (generated)
+Week 1 – Foundation + Core Functionality
+Task 1: Set up the project (build, tests, packages)
+Steps
+1. Create a project (e.g., mvn archetype:generate or a starter project).
+2. Create the packages: app, domain, ports, adapters.
+3. Make sure mvn test runs (even if you have not written tests yet).
+Submission criteria
+• Repository builds successfully.
+• Package structure exists.
+Task 2: Model the domain (pure, no dependencies)
+Domain classes (example)
+Create in domain/:
+• Thesis (entity/model)
+• ThesisId (value object, String wrapper — optional but recommended)
+• DomainException or specific exceptions (e.g., InvalidThesisException)
+Rules
+• The domain layer must NOT reference app, ports, or adapters.
+• No framework annotations (no Spring/JPA/etc.), unless explicitly required by the course.
+Minimum content (guideline)
+• Thesis fields: id, title, studentId, submittedAt
+• Validation: e.g., title and studentId must not be empty
+Submission criteria
+• Domain compiles.
+• Validation rules are implemented (e.g., in constructor or factory method).
+
+Task 3: Define ports (interfaces)
+Create interfaces in ports/:
+IdGeneratorPort
+• Method: String newId() (or ThesisId newId() if you use ThesisId)
+ThesisRepositoryPort
+Minimum methods:
+• void save(Thesis thesis)
+• Optional: Optional<Thesis> findById(String id)
+Tip: Keep it minimal. Port interfaces should contain only what the use case actually needs.
+Submission criteria
+• Ports exist and have no dependencies on app or adapters.
+• Ideally ports depend only on domain types (if necessary).
+Task 4: Implement the use case / application service
+In app/, implement e.g.:
+• SubmitThesisCommand (input data)
+• SubmitThesisResult (output data)
+• SubmitThesisService (use case)
+Expected behavior
+• Accepts a SubmitThesisCommand
+• Validates input (or delegates validation to the domain)
+• Generates an ID via IdGeneratorPort
+• Builds a Thesis object
+• Saves it via ThesisRepositoryPort
+• Returns SubmitThesisResult (e.g., contains thesisId)
+Constructor injection (no framework)
+SubmitThesisService receives its ports via the constructor.
+Submission criteria
+
+• Use case works without real adapters (ports can be faked in tests).
+• No imports from adapters in app.
+Task 5: Unit tests (required)
+Test 1: Use case test (required)
+Test SubmitThesisService with:
+• Fake IdGeneratorPort (returns a constant ID)
+• In-memory fake ThesisRepositoryPort (stores in a list/map)
+Verify:
+• result contains the ID
+• repository stored exactly one thesis
+• stored thesis contains the correct values
+Test 2: Validation test (required)
+Blank title or blank studentId ⇒ exception or error result (depending on your design).
+Submission criteria
+• Tests run via mvn test
+• Tests are deterministic (no uncontrolled real UUIDs/time in the use case test) Week 2 – Adapters, Wiring, (Optional) Architecture Tests & Polishing
+Task 6: Implement adapters (technical layer)
+In adapters/, implement:
+UuidIdGeneratorAdapter implements IdGeneratorPort
+• uses java.util.UUID
+InMemoryThesisRepositoryAdapter implements ThesisRepositoryPort
+• stores data in Map<String, Thesis>
+Note: For this lab, in-memory storage is sufficient (no database required).
+
+Submission criteria
+• Adapters correctly implement ports.
+• Adapters may depend on domain and ports.
+Task 7: Composition root / manual wiring (no framework)
+Create a small “bootstrap” class (e.g., Main, DemoRunner, or ManualWiringExample) in the root package (not inside adapters and not inside domain).
+Instantiate:
+• UuidIdGeneratorAdapter
+• InMemoryThesisRepositoryAdapter
+• SubmitThesisService
+Execute one demo call and print the generated thesis ID.
+Submission criteria
+• The app can be started locally (optional main()), or at least demonstrated via a test/demo.
+• Wiring is outside the core layers (practically: in the root package).
+Task 8 (optional, recommended): ArchUnit architecture tests
+Goal
+Automatically verify that:
+• app does not access adapters
+• domain remains independent
+You can use either:
+• Option A (simple): 2 noClasses() rules or
+• Option B (compact): layeredArchitecture()
+For a 2-week lab, use at most 1–2 rules, so nobody gets stuck fine-tuning the rules.
+Submission criteria (optional)
+• Architecture tests are stable.
+
+• Clear, understandable failure messages on violations.
+Task 9: Documentation (required)
+Create/update README.md with:
+• short description (2–4 sentences)
+• project structure (packages + one sentence per package)
+• how to run (e.g., mvn test, optionally mvn exec:java or via IDE)
+• how to extend (e.g., new adapter → new package in adapters, port remains stable) Submission criteria • An external reader can build the project and run tests.
+Submission format (required)
+Git repository (or ZIP) containing:
+• src/main/java with app/domain/ports/adapters
+• src/test/java with unit tests (at least 2)
+• README.md
+• optional: ArchUnit tests
+Grading rubric (short, practical)
+Must-have (to pass)
+• Use case works (Submit)
+• Unit tests exist and pass
+• Layering is roughly correct (app does not know adapters; domain independent)
+• README explains build/run
+Good / Very good
+• Clean value objects (ThesisId)
+• Clear exceptions / error handling
+• Adapters implemented cleanly (no “hidden business logic” in adapters)
+• Optional ArchUnit tests that are useful and not overly strict
+
+Common mistakes (avoid these)
+• app imports classes from adapters (violates DIP)
+• Domain uses technical APIs directly (file/DB/UUID) instead of ports
+• Flaky tests (e.g., real time/UUID without control)
+• Ports become “god interfaces” (too many methods that the use case does not need)

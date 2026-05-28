@@ -1,0 +1,1908 @@
+Labs and Lecture 02 Clean Text
+==============================
+
+--- Lab_02_Tasks.txt ---
+
+Lab 02: Agile Sprint "Creation Logic"
+Sprint Goal
+Establish a robust, thread-safe database access layer and a decoupled user management system.
+User Story 1: Thread-Safe Repository Access
+As a System Architect, I want to ensure the ThesisRepository exists exactly once in memory, So that we avoid database connection overhead and maintain data consistency across threads.
+• Acceptance Criteria:
+- [ ] Constructor of ThesisRepository is private.
+- [ ] Access is only possible via getInstance().
+- [ ] Implementation uses Double-Checked Locking with volatile.
+- [ ] Verification: A test with 5+ parallel threads must prove that only one instance is initialized (print System.identityHashCode() to verify).
+User Story 2: Interface-Driven User Factory
+As a Developer, I want to create different types of users (Student, Professor) via a central factory, So that the main application remains independent of concrete implementations.
+• Acceptance Criteria:
+- [ ] Create a Java interface named ThesisUser with a method getRole().
+- [ ] Classes Student and Professor must implement this interface.
+- [ ] UserFactory must return the interface type ThesisUser.
+- [ ] Verification: No new Student() or new Professor() calls are allowed in the main class.
+
+--- Lab_02_Tasks_V2_0.txt ---
+
+Lab 02: Agile Sprint "Creation Logic"
+Sprint Goal
+Establish a robust, thread-safe database access layer and a decoupled user management system.
+User Story 1: Global Access to Repository
+As a Developer, I want to implement a thread-safe Singleton for the ThesisRepository, So that concurrent threads don't create multiple database connections.
+• Acceptance Criteria:
+- [ ] The class cannot be instantiated from outside (private constructor).
+- [ ] Uses Double-Checked Locking with volatile.
+- [ ] Passes the testSingletonThreadSafety JUnit test in Eclipse.
+User Story 2: Decoupled User Creation
+As a System Architect, I want to use a Factory to create Student and Professor objects, So that my business logic only depends on the ThesisUser interface.
+• Acceptance Criteria:
+- [ ] ThesisUser interface is created.
+- [ ] UserFactory returns the interface type, not the concrete class.
+- [ ] No new keywords for Users are used in the main method.
+
+--- Lab_03_04_Tasks_3_and_4.txt ---
+
+Lab Tasks 3 and 4 (2 Weeks) – Complete Instructions
+This lab introduces you to clean software architecture (Clean Architecture / Ports & Adapters), testability, and the Dependency Inversion Principle (DIP). You will implement a
+small but complete use case with strict layering:
+• domain/ = core business logic (pure, independent)
+• ports/ = interfaces the application needs
+• app/ = use cases / application services (orchestration)
+• adapters/ = technical implementations (e.g., UUID, in-memory, file)
+Goal: a runnable solution with unit tests, optional ArchUnit rules, a clear package structure, and clean manual wiring (no framework required).
+0) Prerequisites
+• Java 17+
+• Maven (examples below assume Maven)
+• IDE (Eclipse)
+• JUnit 5
+Target project structure src/main/java/<base>/ app/ domain/ ports/ adapters/ src/test/java/<base>/ ( tests) <base> is your package prefix, e.g. mn.icsi486.thesis
+1) Problem statement (business)
+Build a mini application called “Thesis Submission”: students can submit a thesis. The system
+must:
+• generate a new thesis ID
+• validate inputs
+• store the submission
+• create an event/log entry (optional)
+Minimum data
+• title (must not be empty)
+
+• studentId (must not be empty)
+• submittedAt (timestamp)
+• thesisId (generated)
+Week 1 – Foundation + Core Functionality
+Task 1: Set up the project (build, tests, packages)
+Steps
+1. Create a project (e.g., mvn archetype:generate or a starter project).
+2. Create the packages: app, domain, ports, adapters.
+3. Make sure mvn test runs (even if you have not written tests yet).
+Submission criteria
+• Repository builds successfully.
+• Package structure exists.
+Task 2: Model the domain (pure, no dependencies)
+Domain classes (example)
+Create in domain/:
+• Thesis (entity/model)
+• ThesisId (value object, String wrapper — optional but recommended)
+• DomainException or specific exceptions (e.g., InvalidThesisException)
+Rules
+• The domain layer must NOT reference app, ports, or adapters.
+• No framework annotations (no Spring/JPA/etc.), unless explicitly required by the course.
+Minimum content (guideline)
+• Thesis fields: id, title, studentId, submittedAt
+• Validation: e.g., title and studentId must not be empty
+Submission criteria
+• Domain compiles.
+• Validation rules are implemented (e.g., in constructor or factory method).
+
+Task 3: Define ports (interfaces)
+Create interfaces in ports/:
+IdGeneratorPort
+• Method: String newId() (or ThesisId newId() if you use ThesisId)
+ThesisRepositoryPort
+Minimum methods:
+• void save(Thesis thesis)
+• Optional: Optional<Thesis> findById(String id)
+Tip: Keep it minimal. Port interfaces should contain only what the use case actually needs.
+Submission criteria
+• Ports exist and have no dependencies on app or adapters.
+• Ideally ports depend only on domain types (if necessary).
+Task 4: Implement the use case / application service
+In app/, implement e.g.:
+• SubmitThesisCommand (input data)
+• SubmitThesisResult (output data)
+• SubmitThesisService (use case)
+Expected behavior
+• Accepts a SubmitThesisCommand
+• Validates input (or delegates validation to the domain)
+• Generates an ID via IdGeneratorPort
+• Builds a Thesis object
+• Saves it via ThesisRepositoryPort
+• Returns SubmitThesisResult (e.g., contains thesisId)
+Constructor injection (no framework)
+SubmitThesisService receives its ports via the constructor.
+Submission criteria
+
+• Use case works without real adapters (ports can be faked in tests).
+• No imports from adapters in app.
+Task 5: Unit tests (required)
+Test 1: Use case test (required)
+Test SubmitThesisService with:
+• Fake IdGeneratorPort (returns a constant ID)
+• In-memory fake ThesisRepositoryPort (stores in a list/map)
+Verify:
+• result contains the ID
+• repository stored exactly one thesis
+• stored thesis contains the correct values
+Test 2: Validation test (required)
+Blank title or blank studentId ⇒ exception or error result (depending on your design).
+Submission criteria
+• Tests run via mvn test
+• Tests are deterministic (no uncontrolled real UUIDs/time in the use case test) Week 2 – Adapters, Wiring, (Optional) Architecture Tests & Polishing
+Task 6: Implement adapters (technical layer)
+In adapters/, implement:
+UuidIdGeneratorAdapter implements IdGeneratorPort
+• uses java.util.UUID
+InMemoryThesisRepositoryAdapter implements ThesisRepositoryPort
+• stores data in Map<String, Thesis>
+Note: For this lab, in-memory storage is sufficient (no database required).
+
+Submission criteria
+• Adapters correctly implement ports.
+• Adapters may depend on domain and ports.
+Task 7: Composition root / manual wiring (no framework)
+Create a small “bootstrap” class (e.g., Main, DemoRunner, or ManualWiringExample) in the root package (not inside adapters and not inside domain).
+Instantiate:
+• UuidIdGeneratorAdapter
+• InMemoryThesisRepositoryAdapter
+• SubmitThesisService
+Execute one demo call and print the generated thesis ID.
+Submission criteria
+• The app can be started locally (optional main()), or at least demonstrated via a test/demo.
+• Wiring is outside the core layers (practically: in the root package).
+Task 8 (optional, recommended): ArchUnit architecture tests
+Goal
+Automatically verify that:
+• app does not access adapters
+• domain remains independent
+You can use either:
+• Option A (simple): 2 noClasses() rules or
+• Option B (compact): layeredArchitecture()
+For a 2-week lab, use at most 1–2 rules, so nobody gets stuck fine-tuning the rules.
+Submission criteria (optional)
+• Architecture tests are stable.
+
+• Clear, understandable failure messages on violations.
+Task 9: Documentation (required)
+Create/update README.md with:
+• short description (2–4 sentences)
+• project structure (packages + one sentence per package)
+• how to run (e.g., mvn test, optionally mvn exec:java or via IDE)
+• how to extend (e.g., new adapter → new package in adapters, port remains stable) Submission criteria • An external reader can build the project and run tests.
+Submission format (required)
+Git repository (or ZIP) containing:
+• src/main/java with app/domain/ports/adapters
+• src/test/java with unit tests (at least 2)
+• README.md
+• optional: ArchUnit tests
+Grading rubric (short, practical)
+Must-have (to pass)
+• Use case works (Submit)
+• Unit tests exist and pass
+• Layering is roughly correct (app does not know adapters; domain independent)
+• README explains build/run
+Good / Very good
+• Clean value objects (ThesisId)
+• Clear exceptions / error handling
+• Adapters implemented cleanly (no “hidden business logic” in adapters)
+• Optional ArchUnit tests that are useful and not overly strict
+
+Common mistakes (avoid these)
+• app imports classes from adapters (violates DIP)
+• Domain uses technical APIs directly (file/DB/UUID) instead of ports
+• Flaky tests (e.g., real time/UUID without control)
+• Ports become “god interfaces” (too many methods that the use case does not need)
+
+--- Lab_05_Project_Example.txt ---
+
+Student Thesis Management System
+Phase 1 – Assignment Specification (Scrum, Hexagonal Architecture, Swing, JDBC) Course: SWS Lecture & Lab
+Instructor:
+Semester:
+March 1, 2026
+Short description: You will implement a desktop application for managing student theses. The application uses Java Swing as the UI (inbound adapter) and an existing DAO/JDBC persistence layer(outboundadapter), withH2asthedefaultdatabase. InadditiontoCRUD,youwillimplement workflow actions Submit, Approve, Reject. The architecture follows Hexagonal Architecture (Ports & Adapters) and the work is organized using Scrum.
+1. Learning objectives
+After completing Phase 1, you can:
+• structure a Swing/JDBC project using hexagonal architecture (ports/adapters), • apply an MVP/MVC-like separation in Swing (view, presenter, use cases), • enforce workflow rules in the core (not only in the UI), • keep the UI responsive by running DB operations off the EDT (SwingWorker), • integrate existing DAO implementations properly as outbound adapters.
+2. Constraints & prerequisites
+2.1 Provided
+• A DAO already exists. Do not rebuild the DAO.
+• Database: H2 (default). Optional: MySQL via configuration.
+• Technologies: Java (recommended: 17+), Swing, JDBC.
+2.2 Time & process
+• Work is carried out as a Scrum sprint (e.g., one week / until the next lab session).
+• Minimal Scrum events: Planning, short dailies during lab, Review (demo), Retrospective.
+3. Product vision & scope (Phase 1)
+3.1 Goal
+A working desktop app that manages theses, including workflow and persistence.
+3.2 In scope
+• List theses (table) + show details in a form
+• CRUD: Create, Update, Delete
+1
+
+SWS Lecture & Lab Phase 1 Assignment
+• Workflow actions: Submit, Approve, Reject (with reason)
+• Robust error handling (dialog/status display)
+• Responsive UI: DB calls must not run on the EDT
+• Unit tests on use-case/presenter level (at least basic coverage)
+3.3 Out of scope
+• User management/authentication/roles
+• History/audit log, reporting, export (PDF/CSV), advanced search
+• Fully automated UI tests (stretch possible)
+4. Domain model & workflow
+4.1 Entity Thesis
+Required fields (Phase 1):
+• id (unique, managed by DB/DAO)
+• title (must not be empty)
+• studentId (must not be empty)
+• supervisorId (optional in Phase 1)
+• status (see below)
+• rejectReason (only for REJECTED, must not be empty)
+4.2 Status (enum)
+• DRAFT
+• SUBMITTED
+• APPROVED
+• REJECTED
+4.3 Workflow rules (must be enforced in the core)
+• Submit: only from DRAFT to SUBMITTED
+• Approve: only from SUBMITTED to APPROVED
+• Reject: only from SUBMITTED to REJECTED and rejectReason must not be empty
+Note (State Pattern): In Phase 1, the State Pattern is not required. A correct solution using enum ThesisStatus and guarded transitions is fully acceptable. Optional (stretch): Refactor to the State Pattern only if UI and use-case APIs remain stable.
+5. Architecture requirements (Hexagonal Architecture)
+5.1 Strict boundaries
+• The core must not depend on Swing or JDBC/DAO.
+• Swing is an inbound adapter and calls inbound ports (use cases).
+• DAO/JDBC is an outbound adapter and implements outbound ports.
+• No DAO access from UI classes. The UI talks only to use cases/ports.
+5.2 Recommended package structure (example) de.yourorg.thesis core domain
+2
+
+SWS Lecture & Lab Phase 1 Assignment
+Thesis.java
+ThesisStatus.java application ports in
+CreateThesisUseCase.java
+UpdateThesisUseCase.java
+DeleteThesisUseCase.java
+ListThesesUseCase.java
+SubmitThesisUseCase.java
+ApproveThesisUseCase.java
+RejectThesisUseCase.java out
+ThesisRepository.java service
+ThesisWorkflowService.java (or use-case implementations) adapters in swing
+ThesisFrame.java (View)
+ThesisPresenter.java actions (Command/Action classes) out jdbc
+DaoThesisRepository.java (adapter around existing DAO) (existing DAO classes remain here or are referenced here) bootstrap Main.java (composition root) 5.3 Integrating the existing DAO
+Your task is not to build a new DAO, but to:
+• define an outbound port interface in the core (e.g., ThesisRepository), • build an adapter that uses the existing DAO (wrapper/mapper), • keep mapping between DAO records/DTOs and domain objects clean.
+6. UI requirements (Swing)
+6.1 Minimum UI
+• Main window with:
+– Table (list of all theses)
+– Form fields (Title, StudentId, SupervisorId, Status, RejectReason)
+– Buttons: Create, Update, Delete, Refresh, Submit, Approve, Reject
+6.2 Responsiveness
+• DB operations (list, create, update, delete, submit/approve/reject) must not run on the Event Dispatch Thread.
+• Use SwingWorker. Show a loading state (e.g., label/progress).
+6.3 Usability (minimum)
+• Enable/disable workflow buttons depending on the selected status
+3
+
+SWS Lecture & Lab Phase 1 Assignment
+• Nevertheless: rules are validated in the core (UI is not a safety barrier).
+7. Product backlog (user stories & acceptance criteria)
+EPIC A: CRUD & listing
+US-A1: List theses
+As a user, I want to see all theses in a list so that I can manage them.
+AC:
+• Table shows at least: ID, Title, StudentId, SupervisorId, Status
+• Refresh does not block the UI
+• Errors are shown clearly
+US-A2: Create thesis (DRAFT)
+As a user, I want to create a new thesis so that it is recorded in the system.
+AC:
+• Title and StudentId are required
+• Initial status is DRAFT
+• After Create: list is refreshed
+US-A3: Edit thesis
+As a user, I want to edit a thesis so that I can correct data.
+AC:
+• Only possible when a thesis is selected
+• Title must not be empty
+• Persistence via DAO/repository adapter
+US-A4: Delete thesis
+As a user, I want to delete a thesis so that incorrect entries are removed.
+AC:
+• Confirmation dialog before deletion
+• After Delete: list is refreshed and selection is cleared
+EPIC B: Workflow
+US-B1: Submit
+As a user, I want to submit a thesis so that it can be reviewed.
+AC:
+• Only DRAFT can become SUBMITTED
+• Status change is persisted
+• Illegal transitions return a clear error message
+US-B2: Approve
+As a user, I want to approve a submitted thesis so that it becomes final.
+AC:
+• Only SUBMITTED can become APPROVED
+• Status change is persisted
+US-B3: Reject (with reason)
+As a user, I want to reject a submitted thesis and provide a reason to document the decision.
+AC:
+• Only SUBMITTED can become REJECTED
+4
+
+SWS Lecture & Lab Phase 1 Assignment
+• RejectReason is required (not empty)
+• Reason is saved and displayed
+EPIC C: Quality & architecture
+US-C1: UI stays responsive
+AC: DB operations are asynchronous; the UI does not freeze; a loading state is visible.
+US-C2: Clean layering (ports/adapters + MVP)
+AC:
+• No Swing imports in the core
+• No DAO/JDBC calls from view classes
+• At least some unit tests (presenter or use case level)
+Optional (stretch): US-C3 Refactor workflow to State Pattern
+AC: No API changes to use cases or UI; behavior unchanged; tests remain green.
+8. Technical implementation requirements
+8.1 Swing Action (Command idea)
+Recommended: bindbuttonstojavax.swing.Action,e.g.,SubmitAction,ApproveAction,RejectAction.
+The presenter/controller decides whether actions are enabled.
+8.2 Error handling
+• Usecasesthrowdomain-specificexceptions(e.g.,IllegalTransitionException,ValidationException) • The UI shows user-friendly error messages 8.3 Persistence • H2 is initialized via configuration (JDBC URL, user, password) • The DAO adapter encapsulates SQL/JDBC completely
+9. Submission & deliverables
+9.1 Deliverables
+• Source code (Git repository)
+• Short README including:
+– build/run instructions
+– configuration (H2, optional MySQL)
+– architecture overview (ports/adapters, MVP)
+• Sprint artifacts: product backlog (stories), sprint backlog (tasks), brief retrospective notes 9.2 Demo (review)
+In 3–5 minutes, demonstrate:
+• Load list (Refresh)
+• Create + Update + Delete
+• Submit + Approve + Reject with correct rules
+• UI stays responsive (e.g., simulate delay or large list)
+5
+
+SWS Lecture & Lab Phase 1 Assignment
+10. Definition of Done (Phase 1)
+A story is Done when:
+• acceptance criteria are met
+• end-to-end runnable with H2
+• no layer violations (core remains UI/DB-free)
+• at least basic tests exist and are green
+• code is reviewed (briefly) and demo-ready
+11. Grading (suggested rubric)
+Criterion Points Notes
+Functionality (CRUD + listing) 30 End-to-end, correct, sta- ble
+Workflow (Submit/Approve/Reject) 25 Rules enforced in core, persistence correct Architecture (ports/adapters, MVP) 25 No layer leaks, clean sep- aration UI responsiveness (SwingWorker) 10 No freeze, visible loading state Tests & code quality 10 Meaningful unit tests, readability
+12. Checklist (quick self-check)
+Core has no Swing/JDBC/DAO imports
+UI calls only inbound ports/use cases
+DAO is used via a repository adapter
+Workflow rules are validated in the core
+DB operations do not run on the EDT
+Reject requires a reason
+Tests are green
+Optional note: If you finish early, you may refactor the workflow module to the State Pattern as a refactoring exercise. This is not required and will only be evaluated if the core/UI/DB separation is still respected.
+6
+
+--- Lab_06_Acceptance_Criteria_for_Students.txt ---
+
+Checklist: Acceptance Criteria for Sprint
+06 (Swing GUI Basics)
+User Story 1: Architecture-Compliant Wiring
+As a developer, I want to cleanly connect the GUI to the system core without violating the principles of the Hexagonal Architecture.
+• [ ] In Main.java, the ThesisService (or Repository) is loaded exclusively via the RepositoryFactory (or ServiceFactory).
+• [ ] There is not a single new JdbcThesisRepository() or similar instantiation inside the UI classes (MainFrame, ThesisTableModel).
+• [ ] The service is passed into the MainFrame via constructor injection (Dependency Injection).
+User Story 2: The TableModel Adapter (Read)
+As a user, I want to see all existing database entries clearly displayed in a table.
+• [ ] The ThesisTableModel class correctly extends AbstractTableModel.
+• [ ] The getValueAt method uses Java Record Syntax (e.g., thesis.title() and thesis.score()) to access the data, not outdated getter methods.
+• [ ] Upon starting the application, the JTable immediately displays all records already present in the H2 database.
+User Story 3: The Create Form (Create)
+As a user, I want to create new theses via input fields and save them to the database.
+• [ ] The form contains text fields for "Title" and "Score", as well as a "Save" button.
+• [ ] The button's ActionListener reads the values, safely converts the score to a Double, and calls the save method of the service.
+• [ ] After successful saving, the text fields are cleared, and the table updates immediately (via fireTableDataChanged() or reloading the list).
+
+--- Lab_06_Starter.txt ---
+
+Starter-Kit / Code-Gerüste
+1. Der UI-Adapter (ThesisTableModel.java) Dieses Gerüst übersetzt unsere Domain-Daten in ein Format, das Swing versteht.
+Java package ui; import javax.swing.table.AbstractTableModel; import java.util.List; import core.dto.ThesisDTO; public class ThesisTableModel extends AbstractTableModel { private final String[] columnNames = {"ID", "Titel", "Student"}; private List<ThesisDTO> theses; public ThesisTableModel(List<ThesisDTO> theses) { this.theses = theses; } // TODO: Aktualisieren Sie die Liste und benachrichtigen Sie die UI public void setTheses(List<ThesisDTO> theses) { this.theses = theses; // HINT: Rufen Sie die Methode auf, die Swing sagt, dass sich Daten geändert haben!
+// fireTableDataChanged();
+}
+@Override public int getRowCount() { return theses.size();
+}
+@Override public int getColumnCount() { return columnNames.length;
+}
+@Override public String getColumnName(int column) { return columnNames[column]; } @Override public Object getValueAt(int rowIndex, int columnIndex) { ThesisDTO thesis = theses.get(rowIndex); // TODO: Mappen Sie die Spalten (0, 1, 2) auf die Attribute des DTOs switch (columnIndex) { case 0: return thesis.getId(); // case 1: return ...
+// case 2: return ... default: return null;
+}
+}
+
+}
+2. Der Main Controller & View (MainFrame.java) Hier wird das Layout (BorderLayout) gebaut und das Observer-Pattern (ActionListener) implementiert.
+Java package ui; import core.service.ThesisService; import javax.swing.*; import java.awt.*; import java.awt.event.ActionEvent; import java.awt.event.ActionListener; public class MainFrame extends JFrame { private ThesisService thesisService; private JTable table; private ThesisTableModel tableModel; private JTextField titleField, studentField; public MainFrame(ThesisService thesisService) { this.thesisService = thesisService; setTitle("NUM Thesis Management"); setSize(800, 600); setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLayout(new BorderLayout()); initComponents(); loadData(); } private void initComponents() { // --- CENTER: Tabelle --- // TODO: Initialisieren Sie das tableModel mit einer leeren Liste // TODO: Weisen Sie das tableModel der JTable zu // TODO: Fügen Sie die Tabelle in ein JScrollPane und dann ins CENTER des Layouts ein // --- NORTH: Eingabeformular --- JPanel formPanel = new JPanel(); titleField = new JTextField(15); studentField = new JTextField(15); JButton saveBtn = new JButton("Speichern"); formPanel.add(new JLabel("Titel:")); formPanel.add(titleField); formPanel.add(new JLabel("Student:")); formPanel.add(studentField); formPanel.add(saveBtn); add(formPanel, BorderLayout.NORTH); // --- OBSERVER PATTERN --- saveBtn.addActionListener(new ActionListener() {
+
+@Override public void actionPerformed(ActionEvent e) {
+// TODO: 1. Lesen Sie den Text aus den Fields aus
+// TODO: 2. Rufen Sie thesisService.createThesis(...) auf
+// TODO: 3. Leeren Sie die Textfelder (setText(""))
+// TODO: 4. Rufen Sie loadData() auf, um die Tabelle zu aktualisieren
+}
+});
+} private void loadData() {
+// TODO: Holen Sie alle Thesen vom Service und übergeben Sie diese an das tableModel } }
+
+--- Lab_06_Swing_GUI_Basics_Read_Create.txt ---
+
+Lab Assignment Week 6: Swing GUI Basics (Read & Create)
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Context: Over the past weeks, we built a robust Hexagonal Core and connected it to an H2 database. Today, we attach our first Primary Adapter: A Desktop GUI using Java Swing. The UI will remain "dumb" – it contains no business logic and simply communicates with the ThesisService via our Factory.
+User Stories (Sprint 6)
+• US 1 (Wiring): As a developer, I want to retrieve the ThesisService from the
+RepositoryFactory (or ServiceFactory) and pass it to my MainFrame, so the UI can communicate with the Core.
+• US 2 (Table Model): As a user, I want to see all database entries in a JTable. The ThesisTableModel must map the Thesis Java Record components (ID, Title, Score/Student) to the correct table columns.
+• US 3 (Create Action): As a user, I want to type a title and a score into text fields and click "Save" to persist a new thesis in the database and immediately see it in the table.
+Starter-Kit / Code Skeletons
+1. app.Main.java
+Java package app; import adapter.primary.ui.MainFrame; import core.factory.RepositoryFactory; // Or ServiceFactory, depending on your naming import core.service.ThesisService; import javax.swing.SwingUtilities; public class Main { public static void main(String[] args) { // TODO 1: Retrieve the ThesisService via your Factory!
+// ThesisService thesisService = ...
+SwingUtilities.invokeLater(() -> {
+// TODO 2: Pass the service to the MainFrame and set it visible
+// new MainFrame(...).setVisible(true);
+});
+}
+}
+
+2. adapter.primary.ui.ThesisTableModel.java
+Java
+@Override public Object getValueAt(int rowIndex, int columnIndex) {
+Thesis thesis = theses.get(rowIndex);
+// TODO 3: Return the correct Record component based on the column index.
+// NOTE: Use the Java Record syntax (e.g., thesis.title()), NOT getters! switch (columnIndex) { case 0: return null; // Return ID here case 1: return null; // Return Title here case 2: return null; // Return Score / Student Name here default: return null; } }
+3. adapter.primary.ui.MainFrame.java (Save Button Listener)
+Java saveButton.addActionListener(e -> {
+// TODO 4: Read the text from titleField and scoreField (convert score to Double!).
+// TODO 5: Call the createThesis(...) method of your service.
+// TODO 6: Clear the text fields and call loadData() to refresh the table.
+});
+
+--- Lab_06_tms_Structure.txt ---
+
+tms-project/
+├── .gitignore <-- WICHTIG: Hier "database.properties" eintragen!
+├── pom.xml <-- Maven Config (Hier kommt die H2-Dependency rein)
+│
+├── src/main/resources/
+│ └── database.properties <-- Unsere Config (URL, User, Passwort, Modus)
+│
+└── src/main/java/
+└── mn/edu/num/tms/
+│
+├── core/ <-- DER KERN: Darf keine Datenbank-Klassen kennen!
+│ ├── domain/
+│ │ ├── Thesis.java (Die smarte Entity mit Daten & Logik)
+│ │ └── ThesisStatus.java (Enum: DRAFT, SUBMITTED, GRADED)
+│ │
+│ ├── application/
+│ │ ├── ThesisService.java (Die Geschäftslogik: Nutzt das Interface)
+│ │ └── ThesisDto.java (Das neue Record: Dummer Datencontainer für die UI)
+│ │
+│ └── ports/ <-- DIE GRENZE: Verträge mit der Außenwelt
+│ └── IThesisRepository.java (Interface: save(), findAll())
+│
+├── infrastructure/ <-- DIE TECHNIK: Hier passiert die "Drecksarbeit"
+│ ├── config/
+│ │ └── DatabaseConnection.java (Unser Singleton: Liest die .properties Datei)
+
+│ │
+│ └── persistence/
+│ ├── JdbcThesisRepository.java (Unser neues DAO: Macht echtes SQL per JDBC)
+│ ├── InMemoryThesisRepository.java (Der alte RAM-Speicher aus Woche 2)
+│ └── RepositoryFactory.java (Der Schalter: Wählt zwischen JDBC und InMemory)
+│
+└── ui/ <-- DIE BENUTZEROBERFLÄCHE
+└── Main.java (Startet das System, baut die Factory auf, zeigt Menü)s
+
+--- Lab_07_Acceptance_Criteria_for_Students.txt ---
+
+Checklist: Acceptance Criteria for Sprint
+07 (Advanced CRUD & Defensive UI)
+User Story 1: Master-Detail Navigation
+As a user, I want to click a row in the table, and the text fields should automatically populate with the data from that row.
+• [ ] A ListSelectionListener is bound to the SelectionModel of the JTable.
+• [ ] Clicking on a row loads the Title and Score into the input fields.
+• [ ] CRITICAL (State Management): The ID of the clicked record is stored invisibly in a class variable (e.g., private Long selectedThesisId).
+• [ ] The text of the "Save" button visually changes to "Update" after the click.
+User Story 2: Defensive Delete
+As a user, I want to be able to delete a record, but be protected from accidental deletion by a confirmation dialog.
+• [ ] When "Delete" is clicked, a JOptionPane.showConfirmDialog appears asking "Really delete-".
+• [ ] If the user clicks "No" or "Cancel", nothing happens.
+• [ ] If the user clicks "Yes", the record is deleted via the service, the form is cleared, the selectedThesisId is set to null, and the table updates.
+User Story 3: Robust Saving & Exception Handling
+As a user, I expect the application not to crash upon invalid input, but to show me helpful warning messages instead.
+• [ ] The code inside the "Save/Update" button is fully wrapped in a try-catch block.
+• [ ] If no selectedThesisId is set, a new record is created (create). If it is set, an update (update) is executed.
+• [ ] The GUI specifically catches validation errors (e.g., IllegalArgumentException for empty titles originating from the Core) and displays a JOptionPane.showMessageDialog (WARNING_MESSAGE).
+• [ ] The GUI catches general errors (Exception or SQLException) and displays a red Error dialog (ERROR_MESSAGE).
+
+--- Lab_07_Advanced_CRUD_Defensive_UI.txt ---
+
+Lab Assignment Week 7: Advanced CRUD & Defensive UI
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Context: Our UI can read and create data. This week, we implement the missing pieces: Update and Delete. We will introduce "Master-Detail" navigation (clicking a table row fills the form) and make our UI "Defensive" by catching validation exceptions from the Core and showing user- friendly popup dialogs.
+User Stories (Sprint 7)
+• US 1 (Master-Detail): As a user, when I click on a row in the table, the text fields should populate with that record's data, and the application should remember the selected ID.
+• US 2 (Defensive Delete): As a user, when I click "Delete", I want to see a confirmation dialog (JOptionPane) before the record is permanently deleted.
+• US 3 (Robust Save/Update): As a user, if I leave a field empty or enter invalid data, the application must not crash. Instead, it must catch the IllegalArgumentException from the Core and display a warning popup.
+Starter-Kit / Code Skeletons
+1. adapter.primary.ui.MainFrame.java (initListeners method)
+Java
+// TODO 1: Declare this class variable at the top of your MainFrame class!
+// private Long selectedThesisId = null; private void initListeners() {
+// --- 1. MASTER-DETAIL SELECTION --- table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) { int row = table.getSelectedRow(); // TODO 2: Get the ID from column 0 and store it in selectedThesisId // selectedThesisId = (Long) tableModel.getValueAt(row, 0); // TODO 3: Get Title (col 1) and Score (col 2) and update the text fields.
+// TODO 4: Change the saveButton text to "Update" and enable the deleteButton.
+}
+});
+
+// --- 2. DELETE WORKFLOW --- deleteButton.addActionListener(e -> { if (selectedThesisId != null) { // TODO 5: Show a JOptionPane.showConfirmDialog ( YES_NO_OPTION).
+// TODO 6: If the user clicks YES:
+// - Wrap in a try-catch block.
+// - Call service.deleteThesis(selectedThesisId).
+// - Call resetForm() and loadData().
+// - Catch Exceptions and show a
+JOptionPane.showMessageDialog on error.
+}
+});
+// --- 3. ROBUST SAVE/UPDATE --- saveButton.addActionListener(e -> {
+// TODO 7: Wrap the following logic in a try-catch block!
+// Catch IllegalArgumentException (for validation errors) and
+Exception (for DB errors).
+// Display appropriate JOptionPane messages for both.
+// TODO 8: Check: if (selectedThesisId == null)
+// -> Call service.createThesis(...)
+// else
+// -> Call service.updateThesis(selectedThesisId, ...)
+// TODO 9: Call resetForm() and loadData() to refresh the UI.
+});
+}
+
+--- Lab_08_Sprint_08_Backlog_Web_Adapters_Servlets_JSP.txt ---
+
+Lab 08 Sprint 08 Backlog: Web Adapters (Servlets & JSP)
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Epic: Replace the primary desktop adapter (Swing) with a stateless web adapter (Servlet & JSP).
+The Hexagonal System Core (Domain, Service, Repository, Factory) must remain 0% changed!
+User Stories & Acceptance Criteria
+User Story 1: Web Infrastructure & Dependencies
+As a developer, I want to prepare my project for web development so that I can run Java Servlets on a Tomcat server.
+• Acceptance Criteria:
+- [ ] The pom.xml has been updated with the jakarta.servlet-api dependency (Version 6.x or 5.x depending on your Tomcat version).
+- [ ] The scope of the Servlet API is strictly set to <scope>provided</scope> (since Tomcat provides these libraries at runtime).
+- [ ] The Tomcat server is configured in the IDE (Eclipse), and the project can be deployed without errors.
+User Story 2: The Controller (Servlet)
+As a user, I want to visit the URL http://localhost:8080/theses, prompting the system to load all theses from the database.
+• Acceptance Criteria:
+- [ ] A class named ThesisServlet has been created in the adapter.primary.web package and extends HttpServlet.
+- [ ] The class is annotated with @WebServlet("/theses").
+- [ ] The init() method retrieves the ThesisService (or Repository) via the existing RepositoryFactory (or ServiceFactory).
+- [ ] The doGet() method loads the list of theses, stores it as an attribute in the HttpServletRequest ("backpack"), and forwards the request to the JSP.
+
+User Story 3: The View (JSP & Java Records)
+As a user, I want to see the loaded data presented in a clean HTML table within my browser.
+• Acceptance Criteria:
+- [ ] A file named theses.jsp exists in the strictly protected folder src/main/webapp/WEB-INF/views/.
+- [ ] The JSP file contains pure HTML for the basic structure of the table.
+- [ ] The JSP extracts the list from the request attribute and iterates over the entries using a Java for-loop.
+- [ ] The data is rendered into the HTML using modern Java Record accessor methods (e.g., <%= t.title() %>).
+Definition of Done (DoD): The "Ultimate Web Test"
+To successfully close Sprint 08, demonstrate the following to your Teaching Assistant (TA):
+1. Start the Tomcat Server in your IDE.
+2. Open a standard web browser (Chrome/Firefox/Edge).
+3. Navigate to http://localhost:8080/theses (include the Application Context if necessary).
+4. Verify: You must see an HTML table displaying exactly the data you entered into your H2 database during Week 5 (via Console) or Weeks 6/7 (via Swing).
+5. Architecture Check: Show the TA that you did not have to change a single line of code in the entire core package!
+
+--- Lab_08_Sprint_08_Starter_Kit.txt ---
+
+Part 1: Mini Crash Course & Eclipse
+Web Setup
+Before we start writing code, we need to understand how the web works and prepare our Eclipse IDE.
+What exactly is...-
+• Apache Tomcat: Your previous programs simply ran from top to bottom (public static void main). On the web, that doesn't work. You need a program that permanently "listens" to see if someone wants to visit a webpage. This program is called Tomcat (a web server or servlet container).
+• Servlet: A standard Java class that decides what happens when someone visits a URL, e.g., http://localhost:8080/theses. The Servlet acts as our Controller. It fetches the data from the database.
+• JSP (JavaServer Pages): A type of HTML file where we can "smuggle in" Java code to build tables dynamically. The JSP is our View (the user interface).
+Step-by-Step: Setting up Tomcat in Eclipse
+Since we are using Eclipse, you have to configure Tomcat as a "Server" within your IDE.
+Step 1: Download Tomcat
+1. Go to the official website: tomcat.apache.org
+2. Download Tomcat 10 (as a .zip file, NOT as an installer).
+3. Extract the .zip file into a folder on your PC (e.g., C:\Tomcat10).
+Step 2: Prepare Eclipse for the Web (Important: You need the "Eclipse IDE for Enterprise Java and Web Developers". If you have the standard version, you must install the "Eclipse Web Developer Tools" via Help -> Eclipse Marketplace!)
+1. Open Eclipse.
+2. Go to the menu: Window -> Preferences (Windows) or Eclipse -> Settings (Mac).
+3. Search on the left for Server -> Runtime Environments.
+4. Click on Add... -> select Apache Tomcat v10.0 -> Click "Next".
+5. For the "Tomcat installation directory", click "Browse" and select the folder where you just extracted Tomcat (e.g., C:\Tomcat10).
+6. Click "Finish" and then "Apply and Close".
+Step 3: Adjust the Maven Project So that Eclipse understands your project is now a web app,
+you must do two things:
+
+1. Open your pom.xml and add the following at the very top (under <version>):
+<packaging>war</packaging> (This tells Maven: Build a Web Archive in the end).
+2. Manually create exactly this folder structure in your project: src/main/webapp/WEB- INF/views/ (Everything inside webapp will later be recognized by the browser.
+Everything inside WEB-INF is protected from hackers).
+Starter-Kit (Code Skeletons for Students)
+1. ThesisServlet.java (Skeleton)
+Java package adapter.primary.web; import core.dto.ThesisDTO; // or core.domain.Thesis import core.factory.RepositoryFactory; import core.service.ThesisService; import jakarta.servlet.ServletException; import jakarta.servlet.annotation.WebServlet; import jakarta.servlet.http.HttpServlet; import jakarta.servlet.http.HttpServletRequest; import jakarta.servlet.http.HttpServletResponse; import java.io.IOException; import java.util.List; // TODO 1: Add the WebServlet annotation for the path "/theses" public class ThesisServlet extends HttpServlet { private ThesisService thesisService; @Override public void init() throws ServletException { // TODO 2: Retrieve the Service via your Factory from Week 4/5!
+// this.thesisService = ...
+}
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // TODO 3: Load the list of all theses using the thesisService // TODO 4: Pack the list into the Request (attribute name e.g., "thesisList") // request.setAttribute("...", ...); // TODO 5: Forward the Request to "/WEB-INF/views/theses.jsp" // request.getRequestDispatcher("...").forward(request, response); } }
+
+2. theses.jsp (Skeleton - Save under src/main/webapp/WEB-INF/views/)
+Java
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.util.List" %>
+<%@ page import="core.dto.ThesisDTO" %> <html>
+<head>
+<title>NUM Thesis Web Portal</title>
+</head>
+<body>
+<h2>All Theses</h2>
+<table border="1">
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Score / Student</th>
+</tr>
+<%
+// TODO 6: Retrieve the list from the request attribute "thesisList" (Don't forget the Cast!) // TODO 7: Write a for-loop to iterate over the list %> <tr> <td></td> <td></td> <td></td> </tr> <% // TODO 9: Close the for-loop %> </table> </body> </html>
+
+--- Lab_09_Backlog_Web_Forms_Full_CRUD_Sprint_09_Backlog_Starter_Kit.txt ---
+
+Lab 09 Sprint 09 Backlog: Web Forms &
+Full CRUD
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Epic: Extend your stateless Web Adapter (Servlet & JSP) to support data mutation. You will implement the ability to Create and Delete database records via the browser using HTML forms, HTTP POST, and the Post-Redirect-Get (PRG) pattern. The Hexagonal System Core must remain 0% changed!
+User Stories & Acceptance Criteria
+User Story 1: The Input Form (View)
+As a user, I want to see a form on the webpage to enter a new thesis.
+• Acceptance Criteria:
+- [ ] Inside the theses.jsp file, a <form> tag is placed above or below the table.
+- [ ] The form contains the attributes action="theses" and method="POST".
+- [ ] There are two <input> fields (e.g., for title and score).
+- [ ] CRITICAL: Every input field has a name attribute (e.g., name="title"). This is required for the Java server to read the data.
+- [ ] The form contains a <button type="submit">.
+User Story 2: Form Processing in the Servlet (Controller)
+As the system, I want to securely receive the submitted form data and save it to the database via the Core.
+• Acceptance Criteria:
+- [ ] The ThesisServlet overrides the doPost(HttpServletRequest req, HttpServletResponse resp) method.
+- [ ] The parameters are extracted using request.getParameter("...") (the string must exactly match the name attribute from the HTML form).
+- [ ] The score string is safely parsed into a Double using Double.parseDouble(). The parsing logic is wrapped in a try-catch block to handle NumberFormatException.
+- [ ] The ThesisService is called to save the data (e.g., thesisService.createThesis(...)).
+
+User Story 3: The PRG Pattern (Post-Redirect-Get)
+As a user, I do not want to accidentally create duplicate entries if I press F5 (Refresh) after saving a thesis.
+• Acceptance Criteria:
+- [ ] After successfully calling the create method in the service, the Servlet does not use RequestDispatcher.forward.
+- [ ] Instead, the Servlet calls response.sendRedirect("theses"); to force the browser to make a fresh, clean GET request.
+User Story 4: The Delete Action (Security)
+As a user, I want to delete a thesis by clicking a button, but without exposing the system to malicious GET requests.
+• Acceptance Criteria:
+- [ ] A new column is added to the HTML table for actions.
+- [ ] Inside this column, there is NO standard <a> link for deletion.
+- [ ] Instead, there is a mini HTML form for each row with method="POST" and action="delete-thesis".
+- [ ] This mini-form contains a hidden input field (<input type="hidden" name="thesisId" value="<%= t.getId() %>">) that securely transmits the ID to the server.
+Definition of Done (DoD): The Lab Checkout
+To officially close Sprint 09, demonstrate the following process to your Teaching Assistant
+(TA):
+1. The Create Test: Enter a new thesis via the web form and click "Save". Verify that it appears in the table immediately.
+2. The F5 Test: After saving, press F5 (Refresh) in your browser. Verify that the thesis is not duplicated in the table (proving your PRG pattern works).
+3. The Delete Test: Click the "Delete" button next to a thesis and verify it disappears from the table.
+4. The Ultimate Architecture Proof: Stop your Tomcat Server. Go to your Main.java from Week 6 and run your Swing Desktop GUI.
+- Verify: Are the changes you just made in the web browser visible in the Swing Desktop App- (If yes, congratulations! You have successfully mastered the Port & Adapters architecture by swapping primary adapters on the same core/database!)
+
+Starter-Kit (Code Skeletons to get started)
+1. Update for the View (theses.jsp)
+HTML
+<h3>Add a New Thesis</h3>
+<form action="theses" method="POST">
+<label for="title">Title:</label>
+<input type="text" id="title" name="title" required>
+<label for="score">Score:</label>
+<input type="number" step="0.1" id="score" name="score" required>
+<button type="submit">Save Thesis</button>
+</form>
+<hr>
+```
+**2. Update for the Controller (`ThesisServlet.java`)**
+```java
+@Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // 1. Extract form data from the Request // The strings must EXACTLY match the "name" attributes in your HTML!
+String title = request.getParameter("title");
+String scoreString = request.getParameter("score"); try {
+// 2. Convert data (Web data is always String!) double score = Double.parseDouble(scoreString); // 3. Call the Business Logic (Hexagonal Core) // Notice how our Core doesn't know anything about the Web! thesisService.createThesis(title, score); // 4. The PRG-Pattern: Redirect to the GET method!
+// This prevents duplicate submissions when the user presses F5. response.sendRedirect("theses"); } catch (NumberFormatException e) { // Error handling: If the user typed "ABC" instead of a number response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid Score format."); } catch (IllegalArgumentException e) { // Error handling: If our Core validation fails (e.g. empty title) response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+
+}
+}
+3. The Delete Mini-Form (Add this inside your JSP Table loop)
+HTML
+<td>
+<form action="delete-thesis" method="POST" style="display:inline;">
+<input type="hidden" name="thesisId" value="<%= t.getId() %>">
+<button type="submit" onclick="return confirm('Really delete this thesis-');">
+Delete
+</button>
+</form>
+</td> (Note: You will need to create a second Servlet mapped to @WebServlet("/delete-thesis") to handle this POST request!)
+
+--- Lab_10_Sprint_10_Backlog_Secure_Authentication_Starter_Kit.txt ---
+
+Lab 10 Sprint 10 Backlog: Secure
+Authentication
+Epic: As a system administrator, I want to secure the web application using Session Management so that only authenticated users can access, create, or modify data.
+User Stories & Acceptance Criteria
+User Story 1: The Login View & Controller
+As a user, I want to see a login page and submit my credentials.
+• [ ] A login.jsp is created with a POST form containing username and password inputs.
+• [ ] A LoginServlet handles the POST request.
+• [ ] If credentials are valid (hardcode admin / password123 for this sprint, or use the DB if ready), the user object is stored in request.getSession().setAttribute("user", username).
+• [ ] If invalid, the user is redirected to login.jsp-error=invalid.
+User Story 2: The Bouncer (Route Protection)
+As a security officer, I want to ensure that no unauthenticated user can access the dashboard.
+• [ ] The DashboardServlet checks the session for the "user" attribute before loading any data.
+• [ ] If the attribute is null, the servlet immediately issues a response.sendRedirect(request.getContextPath() + "/login") and returns.
+• [ ] Only authenticated users can see the dashboard JSP.
+User Story 3: The Logout Mechanism
+As an authenticated user, I want to securely end my session.
+• [ ] A "Logout" link is added to the main navigation (only visible if logged in).
+• [ ] A LogoutServlet handles the request by calling session.invalidate().
+• [ ] The user is redirected back to the login page after successful logout.
+
+Starter Code Snippets
+1. LoginServlet.java (The Authentication Handler)
+Java
+@WebServlet("/login") public class LoginServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // Show the login form request.getRequestDispatcher("/WEB- INF/views/login.jsp").forward(request, response); } @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { String user = request.getParameter("username"); String pass = request.getParameter("password"); // TODO: Replace hardcoded check with your Domain Core (e.g., UserRepository) if ("admin".equals(user) && "password123".equals(pass)) { // Success: Create session and store user HttpSession session = request.getSession(); session.setAttribute("loggedInUser", user); // Post-Redirect-Get pattern response.sendRedirect(request.getContextPath() + "/dashboard"); } else { // Failure: Redirect back with error flag response.sendRedirect(request.getContextPath() + "/login-error=true"); } } }
+2. DashboardServlet.java (The Bouncer Pattern applied)
+Java
+@WebServlet("/dashboard") public class DashboardServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { HttpSession session = request.getSession();
+
+// --- THE BOUNCER --- if (session.getAttribute("loggedInUser") == null) {
+// Not authenticated! Kick them out. response.sendRedirect(request.getContextPath() + "/login"); return; // CRITICAL: Stop executing the rest of the method } // ------------------- // If we reach this line, the user is authenticated.
+String currentUser = (String) session.getAttribute("loggedInUser"); request.setAttribute("welcomeMessage", "Welcome back, " + currentUser); request.getRequestDispatcher("/WEB- INF/views/dashboard.jsp").forward(request, response); } }
+3. LogoutServlet.java (Session Invalidation)
+Java
+@WebServlet("/logout") public class LogoutServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+HttpSession session = request.getSession(false); // false means:
+don't create a new one if none exists if (session != null) { session.invalidate(); // Destroy the state on the server } response.sendRedirect(request.getContextPath() + "/login"); } }
+Definition of Done (DoD): Security Check-In
+Show the following to your Agile Coach (Instructor) at the end of the lab:
+1. Open a fresh "Incognito/Private" browser window.
+2. Attempt to navigate directly to http://localhost:8080/yourapp/dashboard. Verify you are bounced back to the login screen.
+3. Log in with correct credentials and see the dashboard.
+4. Click Logout, then press the browser's "Back" button. Attempt to refresh the dashboard.
+Verify you are bounced to the login screen again (proving the session was truly destroyed).
+
+--- Lab_11_Sprint_11_Backlog_RESTful_API_Implementation_Starter_Kit.txt ---
+
+Lab 11 Sprint 11 Backlog: RESTful API
+Implementation
+Epic: As a mobile app developer, I need a RESTful JSON API so that I can interact with the core domain logic (fetching and creating books) without relying on HTML views.
+User Stories & Acceptance Criteria
+User Story 1: Project Setup & JSON Library
+As a developer, I want to configure the Jackson library so that I can easily serialize/deserialize JSON data.
+• [ ] Add the com.fasterxml.jackson.core:jackson-databind dependency to the pom.xml.
+• [ ] Create a new package adapter.primary.api for the REST controllers.
+• [ ] Install "Postman" (or an equivalent API client) on your local machine.
+User Story 2: Read All Books (GET)
+As a mobile client, I want to retrieve a list of all books in JSON format.
+• [ ] Create a BookApiServlet mapped to /api/books/*.
+• [ ] Override the doGet method.
+• [ ] Set the response content type to application/json and character encoding to UTF-8.
+• [ ] Fetch the List<Book> from the Core Repository.
+• [ ] Use ObjectMapper.writeValueAsString() to convert the list to JSON and write it to the response.
+User Story 3: Create a Book (POST)
+As a mobile client, I want to send a JSON payload to create a new book in the system.
+• [ ] Override the doPost method in the BookApiServlet.
+• [ ] Read the incoming JSON from the HttpServletRequest input stream.
+• [ ] Use ObjectMapper.readValue() to convert the JSON into a Book domain object.
+• [ ] Save the book via the Core Repository.
+• [ ] Return an HTTP Status Code 201 (Created).
+User Story 4: Proper Error Handling (Status Codes)
+As a mobile client, I want to receive proper HTTP status codes if something goes wrong, instead of Tomcat HTML error pages.
+
+• [ ] If a GET request asks for a specific ID (e.g., /api/books/99) that does not exist, return a 404 Not Found status code.
+• [ ] If the incoming JSON for a POST request is malformed, catch the exception and return a 400 Bad Request status code.
+Starter Code Snippets
+1. BookApiServlet.java (The REST Primary Adapter)
+Java package adapter.primary.api; import com.fasterxml.jackson.databind.ObjectMapper; // ... other imports (HttpServlet, Core classes, etc.) @WebServlet("/api/books/*") public class BookApiServlet extends HttpServlet { private BookRepository bookRepository; // From your Core private ObjectMapper objectMapper; @Override public void init() throws ServletException { // Initialize your repository (via Factory or DI) this.bookRepository = RepositoryFactory.getBookRepository(); // Initialize the Jackson JSON mapper this.objectMapper = new ObjectMapper(); } // --- READ (GET) --- @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // Always set the correct headers for REST APIs! response.setContentType("application/json"); response.setCharacterEncoding("UTF-8"); String pathInfo = request.getPathInfo(); try { if (pathInfo == null || pathInfo.equals("/")) { // Return all books: GET /api/books List<Book> books = bookRepository.findAll(); String jsonResponse = objectMapper.writeValueAsString(books); response.getWriter().write(jsonResponse); response.setStatus(HttpServletResponse.SC_OK); // 200 } else { // Return specific book: GET /api/books/{id} String idStr = pathInfo.substring(1); // Remove leading slash int id = Integer.parseInt(idStr); Book book = bookRepository.findById(id);
+
+if (book != null) {
+String jsonResponse = objectMapper.writeValueAsString(book); response.getWriter().write(jsonResponse); response.setStatus(HttpServletResponse.SC_OK); // 200 } else { response.setStatus(HttpServletResponse.SC_NOT_FOUND); // 404 } } } catch (Exception e) { response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 } } // --- CREATE (POST) --- @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { response.setContentType("application/json"); response.setCharacterEncoding("UTF-8"); try { // 1. Read the JSON body from the request and map it to the Book class Book newBook = objectMapper.readValue(request.getInputStream(), Book.class); // 2. Execute Core Logic bookRepository.save(newBook); // 3. Return Success Status (201 Created) response.setStatus(HttpServletResponse.SC_CREATED); // Optional: Return the created object back to the client response.getWriter().write(objectMapper.writeValueAsString(newBook)); } catch (Exception e) { // If Jackson fails to parse the JSON, it's a Bad Request from the client response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 } } }
+
+Definition of Done (DoD): API Integration Test
+Demonstrate the functionality to your Agile Coach using Postman (or cURL):
+1. The GET Test: Execute a GET request to http://localhost:8080/yourapp/api/books. Prove that the response body contains a properly formatted JSON Array [...].
+2. The POST Test: Execute a POST request. In Postman, select "Body", then "raw", then "JSON". Send a valid JSON object representing a new book. Show the Coach that you receive a 201 Created status code.
+3. The 404 Test: Execute a GET request for a book ID that you know does not exist in the database (e.g., /api/books/9999). Prove that the HTTP status code is 404 Not Found.
+
+--- Lab_12_Sprint_12_Project_1_Backlog_LibraryWeb_Monolith_Starter_Kit.txt ---
+
+Sprint 12 & Project 1 Backlog:
+"LibraryWeb" Monolith
+Epic: As a team of Software Engineers, we need to build the "LibraryWeb" Monolith integrating all concepts from Week 1 to 12. It must be secure, well-architected (Hexagonal), and expose both a Web UI and a REST API.
+Project Requirements & Acceptance Criteria
+Category 1: Architecture & Core (30%)
+The heart of the system must remain pure and independent.
+• [ ] Hexagonal Strictness: The core package contains NO imports from jakarta.servlet.*, java.sql.*, or com.fasterxml.jackson.*.
+• [ ] Domain Model: Contains at least Book (id, title, author, isbn, isAvailable) and User (id, username, password, role).
+• [ ] Ports: Proper interfaces defined in core.port.primary (e.g., LibraryUseCase) and core.port.secondary (e.g., BookRepository).
+Category 2: Data Persistence (JDBC)
+The system must remember data across server restarts.
+• [ ] H2 Database: A relational schema is created via SQL scripts on startup.
+• [ ] Secondary Adapter: A JdbcBookRepository implements the BookRepository interface using PreparedStatement to prevent SQL Injection.
+Category 3: Security & State Management (20%)
+The system must protect user data and restrict access.
+• [ ] AuthN: A Login JSP and LoginServlet exist. Passwords can be hardcoded for the demo, but session creation via JSESSIONID must work.
+• [ ] AuthZ (The Bouncer): The Dashboard and API mutating routes (POST/DELETE) are protected. Unauthenticated users are redirected to /login or get a 401 Unauthorized API response.
+• [ ] XSS Protection: All JSP pages displaying user input use <c:out> from the JSTL library to escape HTML characters.
+Category 4: The Primary Adapters (UI & API) (30%)
+The system must serve both humans and machines.
+
+• [ ] Web UI (JSP): Provide an HTML interface to List all books, Add a new book, and Delete a book. Use Post-Redirect-Get pattern.
+• [ ] REST API (JSON): Provide a BookApiServlet that handles:
+- GET /api/books -> Returns 200 OK with JSON array.
+- POST /api/books -> Accepts JSON body, creates book, returns 201 Created. • [ ] DTOs: The REST API must map the internal Book domain object to a BookDTO before serializing it to JSON. Category 5: Code Quality & Error Handling (20%) The code must be maintainable and fail gracefully. • [ ] No Stacktraces: A global <error-page> is configured in web.xml to catch unhandled 500 errors and display a friendly UI. • [ ] Validation: Server-side validation ensures no Book can be created with a blank title or null author. Returns a 400 Bad Request or an error message in the UI. Starter Setup & Git Instructions
+1. Repository: One student creates the GitHub repository and invites the other as a Collaborator.
+2. Branching Strategy: - main: Only contains stable, working code.
+- feature/core-logic: Branch for the domain.
+- feature/jdbc-adapter: Branch for database connection.
+- feature/web-ui: Branch for JSP/Servlets.
+- feature/rest-api: Branch for API/Jackson.
+3. Submission: Provide the link to your GitHub repository and a short README.md containing instructions on how to start the Tomcat server and access the H2 console.
+
+--- Lab_Sprint_13_Backlog_Starter_Kit.txt ---
+
+Sprint 13 Backlog: Dockerize the Monolith
+Epic: As a DevOps Engineer, I need to containerize the "LibraryWeb or Your Project" application using Docker so that it can be reliably deployed to any environment without manual Tomcat installation.
+User Stories & Acceptance Criteria
+User Story 1: Install & Verify Docker
+As a developer, I want to have Docker Desktop running on my local machine.
+• [ ] Docker Desktop is installed and running (Windows/Mac) or Docker Engine (Linux).
+• [ ] Running docker --version in the terminal returns the installed version.
+• [ ] Running docker run hello-world successfully pulls the test image and prints the success message.
+User Story 2: Compile the WAR File
+As a developer, I want to ensure my project compiles into a clean .war artifact before containerization.
+• [ ] Ensure your pom.xml has <packaging>war</packaging>.
+• [ ] Run mvn clean package (or use your IDE's Maven tool) to generate libraryweb.war or your_project inside the target/ directory.
+User Story 3: Write the Dockerfile
+As an infrastructure engineer, I want to write a Dockerfile that sets up Tomcat and deploys our App.
+• [ ] Create a file named Dockerfile in the root of your project directory (next to pom.xml).
+• [ ] Use tomcat:10.1-jdk17 (or match your local JDK version) as the base image.
+• [ ] Add the COPY command to move the .war file from the target/ folder into the container's webapps/ROOT.war directory.
+User Story 4: Build & Run the Container
+As a system administrator, I want to build the Docker image and start the container with the correct port mapping.
+• [ ] Execute the build command: docker build -t libraryweb-img .
+
+• [ ] Run the container detached, mapping port 8080 to your host: docker run -d -p 8080:8080 --name library-server libraryweb-img • [ ] Verify success by opening http://localhost:8080 in an incognito browser. You should see your application running!
+User Story 5 (Bonus/Advanced): Database Volume
+As a database administrator, I want my H2 file database to survive a container restart.
+• [ ] Modify your application's JDBC URL to point to a specific folder (e.g., jdbc:h2:file:/app/db/librarydb).
+• [ ] Run the container with a volume flag to mount a local directory to /app/db in the container: docker run -d -p 8080:8080 -v /path/to/local/folder:/app/db -- name library-server libraryweb-img • [ ] Restart the container and verify that previously created books are still there.
+Starter Code Snippets
+1. The Dockerfile
+Dockerfile
+# 1. Base Image: Tomcat 10 with Java 17
+FROM tomcat:10.1-jdk17
+# 2. Maintainer info (Optional but good practice)
+LABEL maintainer="your.email@university.edu"
+LABEL app="LibraryWeb"
+# 3. Remove default Tomcat apps to keep the server clean
+RUN rm -rf /usr/local/tomcat/webapps/*
+# 4. Copy the compiled WAR file to the Tomcat deployment folder
+# Renaming it to ROOT.war makes it the default app at localhost:8080/
+COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
+# 5. Expose the port
+EXPOSE 8080
+# 6. Start Tomcat (Optional, base image already does this)
+CMD ["catalina.sh", "run"]
+2. Maven check in pom.xml (Ensure this is present before running mvn clean package) XML <groupId>com.university</groupId> <artifactId>libraryweb</artifactId> <version>1.0-SNAPSHOT</version> <packaging>war</packaging> ``` ---
+
+### Definition of Done (DoD): The "It Works Anywhere" Check
+Show the following to your Agile Coach (Instructor):
+1. Show your running container in the terminal using `docker ps`.
+2. Stop your local IDE server (e.g., IntelliJ Tomcat runner) completely.
+3. Access `http://localhost:8080` in the browser and log in successfully to prove the Docker container is serving the app.
+4. Run `docker stop library-server` and show that the website immediately goes offline.
+
+--- Lectures_09_State_Management_Security.txt ---
+
+Software Construction
+Department of Computer Science
+ICSI486 Spring Semester 2026
+Week 09
+State Management &
+Security
+Sessions, Cookies & The Login Flow
+Instructor
+Learning Objectives
+Understand why State Management is necessary in
+Be able to identify the topics and goals of the week. web applications.
+Understand how sessions contribute to the login system.
+
+Where are we in the architecture-
+Software Construction
+ICSI486
+Week 09: State Management
+The Primary Adapter
+01
+Stateless Protocol
+Focus: The Web Adapter
+Responsible for translating external HTTP requests into internal domain commands. It isolates the core from web-specific Web Adapter technologies.
+HTTP Handling
+Application Core
+HTTP / HSTTePsSsion Mgmt Domain Model Dealing with Limitations
+Use Cases
+Security
+HTTP is stateless by design.
+Bridging the gap between a stateless protocol and stateful business rules.
+Learning Objectives
+Explain the role of the Web Adapter in Describe the separation between Core and Map HTTP requests to the specific user Hexagonal Architecture. Adapter. context.
+
+The Problem: HTTP is Stateless
+Software Construction
+ICSI486
+Week 09: State Management
+Core Limitation
+HTTP has no memory.
+The server forgets everything about the user immediately after sending a response.
+Cycle 1 Cycle 2
+GET /home GET /profile
+User Server User Server
+Response: 200 OK Response: Who are you- "Here is the home page." "I don't know who this request is from." Learning Objectives Explain the principle of HTTP Recognize the impact on user flows. Identify relevance for security-critical statelessness. applications.
+Conclusion: Each request-response cycle is completely independent.
+
+The Shopping Cart Dilemma
+Software Construction
+ICSI486
+Week 09: State Management
+How do we remember items without a database- (Historical Workarounds)
+Workaround 1 Workaround 2
+Hidden Form Fields URL Rewriting
+Passing state inside the HTML form itself, invisible to the user UI Appending state data directly to the URL query parameters for but present in the DOM. every link.
+<!-- HTML Form -->
+<form action="/checkout">
+<input type="hidden" name="cart_total" .../checkout-user=batbold&item=book value="100.00" > </form> Technique Technique Embed state in type="hidden". Append -key=value to links.
+Unsecure Easily Manipulated Hard to Maintain
+User can simply edit the HTML/URL to change price from 100 to 1!
+LSeeanrnt ivniga OPObjSeTc trievqeusest. Sent via GET request.
+List historical workarounds for state Evaluate risks of Hidden Fields and URL Justify the need for robust state management. Rewriting. management solutions.
+Why are these dangerous-
+
+The Client-Side Solution: Cookies
+Software Construction
+ICSI486
+Week 09: State Management
+Cookies give the web memory.
+State Mechanism
+Small text files stored in the browser that are automatically exchanged with the server.
+Step 1: First Visit Step 2: Subsequent Requests
+Response 200 OK GET /profile
+Server Browser Browser Server
+HTTP Response Header HTTP Request Header
+HTTP/1.1 200 OK GET /profile HTTP/1.1
+Set-Cookie: user=batbold Host: www.example.com
+Content-Type: text/html Cookie: user=batbold
+Browser saves this file! Sent automatically!
+Learning Objectives
+Describe how cookies work (browser Understand the Set-Cookie Header -> Recognize use cases and automatic storage). Cookie Request flow. exchange.
+
+Software Construction Limitations of Cookies
+ICSI486
+Week 09: State Management
+Size Limits
+Security Risks
+Technical Constraints
+Client-Side Vulnerabilities
+Small Capacity
+Data is Visible
+Maximum size is only ~4KB per cookie. Users (and attackers) can read cookie contents effortlessly.
+Quantity Limit
+Data is Mutable
+Browsers limit the number of cookies per domain
+Users can modify cookie values using browser (e.g., 20-50).
+DevTools.
+Security Rule #1
+NevDeo Nro t Sstotreore sensitive dDoa Ntota Sto rien a raw cookie!
+Passwords, Credit Cards Business Logic Flags (isAdmin)
+Learning Objectives
+Identify technical limits of cookies (size, Explain security risks (manipulation, Classify sensitive data correctly (never quantity). readability). store in plain text).
+
+The Server-Side Solution: HttpSession
+Software Construction
+ICSI486
+Week 09: State Management
+Keep the State on the Server.
+Secure Architecture
+Instead of sending data back and forth, we only exchange a reference ID.
+Client Side Server Side
+Tomcat Memory
+The Browser
+HttpSession Object
+HTTP Request
+Cookie
+Key (ID) Value (Data)
+ID
+JSESSIONID=F9A2B...
+F9A2B... User: Batbold Cart: [Book]
+Contains only a random ID. No shopping cart data, no user details.
+Learning Objectives
+Explain the concept of server-side
+Understand the separation between Classify the advantages over pure client- sessions. session ID and session data. side solutions.
+
+The JSESSIONID
+Software Construction
+ICSI486
+Week 09: State Management
+Tomcat's default Session Cookie.
+Session Tracking Mechanism
+A unique identifier assigned to a specific user session to maintain state across multiple requests.
+The Technical View The Analogy
+Your Coat
+HTTP Header
+Cloakroom Ticket
+Cookie: JSESSIONID=F9A2B3C4...
+Ticket #42 User Data
+Generated automatically by the Servlet Container (Tomcat). (JSESSIONID) (Stored on Server) Contains NO data, just a random ID string.
+Sent back by browser on every request. "You hold the ticket (ID), the cloakroom staff holds the jacket (Data). If you lose the ticket, you lose access to the jacket." Learning Objectives Identify the role of the JSESSIONID in Tomcat. Explain the analogy of the Cloakroom Ticket.
+Understand why the ID must be random and unpredictable.
+
+Working with Sessions in Servlets
+Software Construction
+ICSI486
+Week 09: State Management request.getSession()
+MyServlet.java 1
+This single method handles the heavy lifting. It
+1 // Inside your HttpServlet method checks the request headers for a Cookie:
+2 public void doGet(HttpServletRequest req, JSESSIONID=...
+3 HttpServletResponse resp) {
+4 // THE MAGIC LINE: Ask Tomcat for the session
+Scenario A: Cookie Found
+5 HttpSession session = req.getSession();
+6 // Check if this is a fresh session Tomcat finds the matching session in RAM and returns it.
+7 if (session.isNew()) { "Ah, it's you again!"
+8 Stringid = session.getId();
+9 System.out.println("Welcome: " + id);
+10 } else { Scenario B: No Cookie
+11 System.out.println("Welcome back!");
+Tomcat creates a blank HttpSession object
+12 } and generates a new random JSESSIONID.
+13 }
+Learning Objectives
+Correctly apply the request.getSession() Understand when a session is Explain the session lifecycle in the Servlet method. automatically created. context.
+
+Storing & Retrieving Data
+Software Construction
+ICSI486
+Week 09: State Management
+SessionDemoServlet.java
+Think "HashMap"
+1 Protected void doGet(HttpServletRequest req, 2 HttpServletResponse resp) { The session is essentially a HashMap<String, Object> that persists across multiple requests.
+3 HttpSession session = req.getSession();
+4 // 1. STORE (Write) - Like a Map<String, Object>
+5 User currentUser = new User("Batbold", "admin");
+6 session.setAttribute("loggedInUser", currentUser);
+Storage (setAttribute)
+7 // 2. RETRIEVE (Read) - Returns 'Object'
+Keys are Strings (e.g., "cart", "user"). Values can be any
+8 Object raw = session.getAttribute("loggedInUser");
+Java Object.
+9 if (raw != null) {
+10 // 3. CAST - Explicit casting is required!
+11 User u = (User) raw;
+Retrieval (getAttribute)
+12 System.out.println("Hello " + u.getName());
+Returns generic Object. You must cast it back to your
+13 } specific type (e.g., (User)) to use it.
+14 }
+Learning Objectives
+Securely store and retrieve data in the HttpSession. Understand why Type Casting is necessary during retrieval.
+Choose appropriate String keys for Session attributes.
+
+Security Concept: AuthN vs. AuthZ
+Software Construction
+ICSI486
+Week 09: State Management & Security
+Authentication Authorization
+AuthN AuthZ "Who are you-" "What can you do-"
+Verifying the identity of a user, device, or system. Ideally Determining the access rights and privileges of an done via credentials. authenticated user.
+// Batbold -> DELETE book
+User: "I am Batbold" if (user.role == 'ADMIN') {
+Pass: "secret123" allowAction();
+System: "Confirmed."
+}
+Mechanism Mechanism
+Login Form / MFA Permissions & Roles
+LearnFiinrsgt Objectives Then
+1 2 "You cannot authorize a ghost."
+Authentication Authorization
+Clearly distinguish between Authentication
+Name examples of permissions and roles. Understand the order: AuthN before AuthZ. and Authorization.
+
+The Request Phase
+The Login Flow (Step 1)
+Software Construction
+ICSI486 Delivering the Login Form to the User
+Week 09: State Management
+STEP 1
+VIEW
+SERVER login.jsp
+Action
+Controller
+Requests Page
+LoginServlet
+GET /login Determine View
+Protocol Detail
+This is just a request for the UI. No credentials (username/password) are sent in this step.
+Credentials will be sent in the subsequent POST request.
+Learning Objectives
+Identify the GET /login endpoint and its Understand the delivery of the HTML form Understand why sensitive data is never sent purpose. (View). via GET.
+
+The POST Request Phase
+The Login Flow (Step 2)
+Software Construction
+ICSI486 Submitting Credentials to the Server
+Week 09: State Management
+STEP 2 SERVER LOGIC
+User Action Controller
+Extraction
+Submits Form LoginServlet request.getParameter("user");
+POST /login request.getParameter("pass");
+@Override doPost(...) user=batbold&pass=***
+Security Note
+Unlike GET, the POST request carries data in the HTTP Body. This keeps credentials out of the browser history and URL bar, but it is not encrypted unless we use HTTPS!
+Learning Objectives
+Understand the data flow during POST
+Use the method Recognize the separation between
+/login (Browser → Server). request.getParameter() to extract data. Servlet (Controller) and HTML (View).
+
+The Validation Phase
+The Login Flow (Step 3)
+Software Construction
+ICSI486
+Verifying Credentials against the Database Week 09: State Management & Security CONTROLLER MODEL LOGIC Verify Process Input DB Query Compare Strings LoginServlet UserRepository if (in.equals(store)) Extracts username & password findByUsername(u) Security Reality Check In a real-world application, never store passwords in plain text. You must use strong hashing algorithms (like Argon2 or BCrypt). For this academic lab, we focus on the session mechanism, so we use plain text for simplicity.
+Learning Objectives
+Load the user from the database using Conceptually understand the password
+Understand the significance of password
+UserRepository. comparison (Input vs. DB). hashing in real-world production systems.
+
+The Login Flow (Step 4)
+Software Construction
+ICSI486
+Week 09: State Management
+LoginServlet.java (doPost) The Session Phase if (isValidUser) {
+// 1. Create/Get Session & Store User Establishing Identity & Redirecting
+HttpSession session = request.getSession(); session.setAttribute("loggedInUser", user); // 2. Redirect to Dashboard response.sendRedirect("/dashboard"); ACTION } STATE CHANGE RESPONSE Server Memory PRG Pattern Transition Store User Object 302 Redirect Anonymous Logged In session.setAttribute(...) Identity Established Location: /dashboard Learning Objectives Explain the state transition from Store user in session and Determine the destination route anonymous to logged in. implement PRG pattern. after a successful login.
+
+The Login Flow (Step 5 - Failure)
+Software Construction
+ICSI486
+Week 09: State Management
+Handling Invalid Credentials
+Authentication Failed Scenario
+Database ACTION RESPONSE
+CHECK
+Password Check
+State Mgmt
+NO Session Created login.jsp-error=true
+INVALID
+Do NOT set attributes
+Servlet Logic JSP View Logic
+<c:if test="${param.error}"> if (!passwordMatch) {
+<div class="alert alert-danger">
+// Do NOT create session!
+Login failed! response.sendRedirect("/login.jsp-error=true");
+</div> return;
+</c:if>
+}
+Learning Objectives
+Handle failed logins correctly (Security Do not create session attributes if Control feedback via Redirect and Query Best Practice). credentials are invalid. Parameters (-error=true).
+
+Software Construction The Bouncer Pattern
+ICSI486
+Week 09: State Management & Security
+Protecting Secured Routes
+Security Pattern
+Every protected Servlet (e.g., /dashboard, /deleteBook) must check if the user is logged in before executing business logic.
+Hacker Authorized User
+GET /dashboard GET /dashboard
+No Session (Anonymous) Has JSESSIONID
+Access Denied Access Granted
+Redirect: /login Execute Business Logic "Please log in first." Show dashboard data, allow edits, etc.
+Learning Objectives
+Recognize the need for protecting routes.
+Enforce login status checks before executing business logic.
+Identify examples of protected endpoints.
+
+Implementing the Bouncer (Servlet)
+Software Construction
+ICSI486
+Week 09: State Management & Security
+DashboardServlet.java Check the ID
+We look into the HttpSession map. If the key
+1 Protected void doGet(HttpServletRequest req, "loggedInUser" is missing or null, the user is 2 HttpServletResponseresp) { anonymous.
+3 // 1. Retrieve the session
+4 HttpSession session = req.getSession();
+Redirect (HTTP 302)
+5 // 2. THE BOUNCER CHECK: Is user present-
+6 if (session.getAttribute("loggedInUser") == null) { sendRedirect tells the browser to go to /login. It does 7 // 3. Redirect to Login Page not stop the code execution automatically!
+8 resp.sendRedirect("/login-error=unauthorized");
+9 return; // CRITICAL: Stop execution!
+10 } The Critical Return
+11 // 4. Safe Area: Execute Business Logic
+Always use return; after a redirect. Without it, the "Safe
+12 req.getRequestDispatcher("/dashboard.jsp").forward(req, Area" code (Line 14) would still run, causing errors.
+13 resp);
+14 }
+15
+Learning Objectives
+Implement the Bouncer check in the Servlet. Apply redirects securely and stop execution using return;.
+Use consistent attribute names for Session objects.
+
+Why repeat yourself- The "Filter" Alternative (Advanced)
+Software Construction
+Week 09: State Management & Security
+ICSI486
+Instead of adding the "Bouncer" check to every single
+Servlet, we can use a centralized gatekeeper. Request Flow with Filter
+Java Servlet Filters
+Implement the javax.servlet.Filter interface to intercept requests before they reach your logic.
+SecurityFilter checkSession() urlPatterns = "/admin/*"
+Automatic Protection
+Define URL patterns (e.g., /admin/*) to automatically protect entire sections of your app.
+DRY Principle Authorized No Session
+AdminServlet Login Page
+Don't Repeat Yourself. Write the security logic once, apply it everywhere.
+Learning Objectives
+Understand the purpose and application of Servlet Filters (Middleware).
+Define URL patterns (e.g., /admin/*) to automatically protect entire sections.
+Apply the DRY principle by implementing centralized security checks.
+
+JSTL & Sessions in the JSP
+Software Construction
+ICSI486
+Week 09: State Management & Security navbar.jsp
+1 sessionScope Object
+1 <%@taglibprefix="c“ uri="http://java.sun.com/jsp/jstl/core"%>
+2 <nav class="navbar"> JSTL gives you direct access to the HttpSession map. Writing ${sessionScope.user} is equivalent to 3 <!-- Always visible link --> calling session.getAttribute("user") in Java.
+4 <a href="/home">My App</a>
+5 <!-- CONDITION: Is User Logged In- -->
+2 Conditional Rendering
+6 <c:if test="${not empty sessionScope.loggedInUser}">
+7 <!-- Show only to authenticated users -->
+The view changes based on the state. We use
+8 <span>Welcome, ${sessionScope.loggedInUser.name}</span> <c:if> to check for existence (not empty).
+9 <a href="/logout" class="btn-red">Logout</a>
+Resulting UI States
+10 </c:if>
+11 <!-- CONDITION: Is User Anonymous- -->
+State: Logged In Welcome, Batbold Logout
+12 <c:if test="${empty sessionScope.loggedInUser}">
+13 <a href="/login">Login</a>
+14 </c:if>
+15 </nav>
+Learning Objectives
+Implement conditional rendering using JSTL (c:if).
+Correctly use sessionScope in JSP to access session attributes.
+Display UI elements (e.g., Logout button) dependent on the user's login status.
+
+Session Hijacking
+Software Construction
+ICSI486
+Week 09: State Management & Security
+The Interception The Impersonation
+Man-In-The-Middle Identity Theft
+Stealing the Ticket Cloning the Session
+If a connection is unencrypted (HTTP), hackers can sniff network The hacker copies the stolen ID into their own browser. traffic and read the JSESSIONID cookie.
+Server Deception
+Public WiFi Risk
+The server cannot distinguish the hacker from the victim. The
+Open networks (cafes, universities) are prime locations for this hacker becomes you. passive attack.
+Security Rule #2: Prevention
+Encrypt the Connection with HTTPS
+HTTPS
+Only
+SSL/TLS encryption makes the traffic unreadable to sniffers.
+Learning Objectives
+Explain the session hijacking attack scenario. Understand the consequences of a stolen JSESSIONID Justify HTTPS as the central countermeasure. cookie.
+
+Security: Cookie Flags
+Software Construction
+ICSI486
+Week 09: State Management & Security
+HttpOnly Secure
+XSS Protection Transport Protection
+Blocks JavaScript Access HTTPS Only
+Prevents document.cookie access in the browser. Browser will never send the cookie over an unencrypted HTTP connection.
+Mitigates XSS
+Prevents Sniffing
+Even if an attacker injects a script, they cannot steal the Session ID. Protects against Man-in-the-Middle attacks on public networks.
+Tomcat Configuration Best Practice
+Enable these flags globally in your web.xml:
+<cookie-config>
+<http-only>true</http-only>
+<secure>true</secure>
+</cookie-config>
+Learning Objectives
+Explain the significance of the HttpOnlyand Secureflags.
+Establish the connection to XSS (Cross-Site Scripting) and transport encryption.
+Identify server-side configuration (web.xml) as a best practice.
+
+Resource Management
+Session Expiration
+Software Construction
+ICSI486
+Week 09: State Management
+Sessions consume Server RAM.
+They cannot live forever. Without cleanup, inactive
+Default Behavior Tomcat sessions would eventually crash the server.
+The Cost of State 30
+Every active session occupies memory on the
+Minutes Session Destroyed server heap. 10,000 abandoned carts = significant wasted RAM. src/main/webapp/WEB-INF/web.xml Automatic Cleanup Tip: Setting this to -1 makes sessions never expire (Dangerous!).
+Tomcat automatically destroys sessions after
+<session-timeout>15</session-timeout> a specific period of inactivity (idle time).
+Learning Objectives
+Understand the reasons for session Know default values (30 min) and Estimate resource consumption of timeouts (RAM management). configuration in web.xml. inactive sessions.
+
+Software Construction Ending the Session The Logout Flow
+ICSI486
+Week 09: State Management
+Gracefully terminating user access and cleaning up server memory
+STEP 1 SERVER
+RESPONSE
+User Action LogoutServlet Outcome
+Clicks Logout Destroy Session Redirect (302)
+GET /logout session.invalidate(); Location: /login
+Security Best Practice
+Always use session.invalidate() instead of just removing attributes. This ensures the Session ID is completely revoked on the server side.
+Learning Objectives
+Correctly implement logout Plan user flow after logout (redirect Justify security through immediate (session.invalidate()). target). session termination.
+
+Software Construction Summary & Lab Mission
+ICSI486
+Week 09: State Management
+Key Takeaways
+HTTP is Stateless
+LAB MISSION 09
+Estimated: 90 min
+Sessions provide the necessary "memory" for our applications, bridging the gap between independent requests.
+Objective
+Build a Secure Login & Logout Flow
+JSESSIONID is the Key Create LoginServlet (GET & POST)
+The server stores the data; the client holds only the ID ticket.
+Implement UserRepository verification
+Security relies on protecting this ID.
+Protect Dashboard with Session Check
+Add Logout functionality
+The Bouncer Pattern
+Never trust a request blindly. Every protected route must verify the user's session status first. "Security is not a feature, it's a state of mind." Learning Objectives Summarize the key takeaways of the lecture. Clearly identify the to-dos for Lab 09.
+Apply security principles to your own application.
+
+--- Project_III_Microservices_Architecture_Splitting_the_Monolith_en.txt ---
+
+Project 3: Microservices Architecture – Splitting the Monolith Module: ICSI486
+Software Construction Project Type: Group Work / Final Project Topic: Deconstructing the monolithicThesis Management System intoa Microservices Architecture.
+Epic / Project Vision
+The existing monolithic Thesis Management System is successful, but it does not scale well for the future. If the notification code fails, the entire system crashes. The Vision: The system will be decomposed into at least three independent microservices. Each service is responsible for its own domain, has its own database (Database-per-Service pattern), and can be deployed independently.
+User Story 1: The Core Thesis Service
+As a faculty administrator, I want to have a dedicated service for managing theses, so that the core logic (title, status "PROPOSED", "ACCEPTED") runs completely independently of user dataor emails.
+Tasks:
+- Create anew SpringBoot / Javaproject forthe . thesis-service
+- Transferthe existingHexagonal Architecture for the entity intothis service. Thesis
+- This service no longer stores student names as plain text, but only a studentId (reference tothe StudentService).
+- Configureits own database (e.g., Postgres DB viaDocker). thesis_db
+- ProvideRESTAPI endpoints: , . POST /theses GET /theses/{id}
+User Story 2: The Student Profile Service
+As the university, I want to centrally manage student data in a dedicated service, so that other systems (like the library or the cafeteria) can also access this data in the future without touching thethesis code.
+Tasks:
+- Create anew project for the . student-service
+- Build the domain (id, firstName, lastName, email, matriculationNumber). Student
+- Configureits own database (e.g., Postgres DB ). student_db
+- ProvideRESTAPI: . GET /students/{id}
+- Integration: Upon creating a thesis, the must check via a synchronous thesis-service HTTP call (REST/OpenFeign) whether the exists inthe . studentId student-service
+
+User Story 3: The Notification Service
+As a student, I want to be notified when my thesis has been submitted or approved, so that I am always informed about thecurrent status.
+Tasks:
+- Create anew project for the . notification-service
+- Thisservice does not havea complex database, butit might store alog ofsent emails.
+- Communication: Implement the communication between the and the thesis-service . notification-service Option A (Synchronous): The sends a REST request to the
+- thesis-service POST . notification-service Option B (Asynchronous / Advanced): Use a message broker (e.g., RabbitMQ or o Kafka). The fires a "ThesisCreatedEvent", and the thesis-service listenstoit (Event-Driven Architecture). notification-service
+User Story 4: DevOps & Orchestration
+As a DevOps Engineer, I want to be able to start all services with a single command, so that newdevelopers canset upthesystem locally inminutes.
+Tasks:
+- Writea separate foreach ofthe three services (Thesis, Student, Notification). Dockerfile
+- Create acentral in theroot directory. docker-compose.yml
+- Orchestrate allservices and theirdatabases in theComposefile.
+- Ensure that the services can communicate with each other over the internal Docker network (e.g., ). http://student-service:8080/students/1 ✅ Definition of Done (Acceptance Criteria for Submission)
+To receive fullpoints for thisproject, thefollowingcriteria mustbe met:
+- []3+ Services: There are at least three runnable, isolated microservices.
+- [ ] Decentralized Data Management: There is no longer a central, monolithic database. Each service has itsown datastorage (Database-per-Service).
+- [ ] Architectural Fidelity: Hexagonal Architecture (Ports & Adapters) continues to be strictlyapplied withineach individual microservice.
+- [ ] Inter-Service Communication: At least one service retrieves data from another service (e.g., Thesis queries Student)ortriggers an action (Thesis triggers Notification).
+- [ ] Docker Compose: A single command ( ) successfully docker-compose up --build spinsuptheentire ecosystem (all services +databases).
+- [ ] Postman Collection: The project includes a Postman collection (or scripts) that curl instructors can useto test theAPIs ofthevarious services.
+
+Starter Code: The Architecture of the docker-compose.yml
+Here is askeleton of what thefinal Docker orchestration should looklikefor thestudents:
+YAML version: '3.8'
+services:
+# 1. Student Service & DB
+student-db:
+image: postgres:15-alpine
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: password
+POSTGRES_DB: student_db
+student-service:
+build: ./student-service
+ports:
+- "8081:8080"
+environment:
+DB_URL: jdbc:postgresql://student-db:5432/student_db
+depends_on:
+- student-db # 2. Thesis Service & DB
+thesis-db:
+image: postgres:15-alpine
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: password
+POSTGRES_DB: thesis_db
+thesis-service:
+build: ./thesis-service
+ports:
+- "8082:8080"
+environment:
+DB_URL: jdbc:postgresql://thesis-db:5432/thesis_db
+# URL for Inter-Service Communication
+STUDENT_SERVICE_URL: http://student-service:8080
+NOTIFICATION_SERVICE_URL: http://notification-service:8080
+depends_on:
+- thesis-db
+- student-service # 3. Notification Service
+notification-service:
+build: ./notification-service
+ports:
+- "8083:8080"
+
+--- Sprint_14_Backlog_Bonus_Splitting_the_Monolith_Docker_Compose_Starter_Kit_Thesis_Management.txt ---
+
+Sprint 14 Backlog: Splitting the Monolith
+& Docker Compose
+Sprint Goal: Extract the database from the application's memory/local storage and orchestrate a multi-container environment (App + Database) using Docker Compose.
+User Story
+As a System Architect, I want to separate the PostgreSQL database from the Thesis application container, So that database data persists across application restarts and the architecture scales professionally.
+Task Board (To-Do)
+1. Database Adapter Configuration: Modify the JdbcThesisRepository (or the application properties) to read database credentials (DB_URL, DB_USER, DB_PASSWORD) from environment variables instead of hardcoding them.
+2. Create Docker Compose File: Create a docker-compose.yml file in the root directory.
+3. Define Services: Configure two services: thesis-db (Postgres) and thesis-app (Your custom Dockerfile).
+4. Volume Mapping: Mount a Docker volume for the thesis-db service to ensure Thesis records survive container restarts.
+5. Database Initialization: Map an init.sql script into the Postgres container to automatically create the theses table on the first boot.
+Acceptance Criteria
+• [ ] Running docker-compose up -d successfully starts both the database and the application.
+• [ ] The thesis-app waits for thesis-db to be ready and connects successfully.
+• [ ] Data Persistence: Creating a thesis, stopping the containers (docker-compose down), and restarting them retains the previously created thesis records.
+Starter Code: docker-compose.yml & init.sql
+File: docker-compose.yml
+YAML version: '3.8'
+services:
+thesis-db:
+image: postgres:15-alpine container_name: thesis_postgres
+
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: secretpassword
+POSTGRES_DB: thesis_management
+ports:
+- "5432:5432"
+volumes:
+- pgdata:/var/lib/postgresql/data # Automatically run the init script on the first startup
+- ./init.sql:/docker-entrypoint-initdb.d/init.sql
+thesis-app:
+build: . container_name: thesis_backend
+ports:
+- "8080:8080"
+environment:
+# These environment variables must be read by your
+JdbcThesisRepository!
+DB_URL: jdbc:postgresql://thesis-db:5432/thesis_management
+DB_USER: admin
+DB_PASSWORD: secretpassword
+depends_on:
+- thesis-db
+volumes:
+pgdata: # Persistent storage for PostgreSQL
+File: init.sql (Place in project root)
+SQL
+-- This script runs automatically when the Postgres container is created
+CREATE TABLE IF NOT EXISTS theses ( id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, student_name VARCHAR(100) NOT NULL, status VARCHAR(50) DEFAULT 'PROPOSED' );
+
+--- Sprint_14_Backlog_Splitting_the_Monolith_Docker_Compose_Starter_Kit.txt ---
+
+Sprint 14 Backlog: Splitting the Monolith &
+Docker Compose
+Epic: As a Platform Architect, I want to split the LibraryWeb Monolith into independent Microservices and manage them via Docker Compose, so that the team can scale and deploy the UI independently from the Core APIs.
+User Stories & Acceptance Criteria
+User Story 1: Extract the Book Service
+As a backend developer, I need to create an isolated Book API service.
+• [ ] Create a new project/folder named book-service.
+• [ ] Migrate only the Book domain logic, Book Repository, and BookApiServlet to this
+project.
+• [ ] Create a Dockerfile for the book-service.
+• [ ] The service must run on port 8080 internally and return JSON data on GET
+/api/books.
+User Story 2: Extract the Frontend UI
+As a frontend developer, I need a lightweight service that only serves the JSP/HTML and consumes the external APIs.
+• [ ] Create a new project/folder named frontend-service.
+• [ ] Migrate the JSP files and UI Servlets.
+• [ ] Crucial Change: The UI Servlets must no longer call the internal Core
+LibraryUseCase. Instead, they must make HTTP Requests (e.g., using java.net.HttpURLConnection or HttpClient) to http://book- service:8080/api/books to fetch data and pass it to the JSPs.
+• [ ] Create a Dockerfile for the frontend-service.
+User Story 3: Orchestrate with Docker Compose
+As a DevOps engineer, I want to start the whole system with a single command.
+• [ ] Create a docker-compose.yml file in the root parent directory.
+• [ ] Define two services: book-service and frontend-service.
+• [ ] Use the build: ./book-service directive so Compose builds the images automatically.
+
+• [ ] Map the host port 8080 to the frontend-service container port 8080. (Do NOT expose the book-service port to the host machine directly, it should only be accessible internally by the frontend).
+User Story 4: Add a PostgreSQL Database (Bonus)
+As a DBA, I want a robust database running alongside our application.
+• [ ] Add a db service using the postgres:15-alpine image.
+• [ ] Configure POSTGRES_USER and POSTGRES_PASSWORD using environment variables.
+• [ ] Add depends_on: - db to your book-service.
+• [ ] Update the JDBC connection string in the book-service to connect to jdbc:postgresql://db:5432/postgres.
+Starter Code Snippets
+1. Example docker-compose.yml
+YAML version: '3.8'
+services:
+# 1. The Book API (Backend)
+book-service:
+build: ./book-service
+# Notice: No 'ports' mapped to the host! It's perfectly hidden inside the docker network.
+environment:
+- DB_URL=jdbc:h2:mem:booksDb # 2. The Web UI (Frontend)
+frontend-service:
+build: ./frontend-service
+ports:
+- "8080:8080" # Exposed to your laptop browser!
+depends_on:
+- book-service # Starts after the backend
+environment:
+# Tell the frontend where the backend is located on the internal Docker network
+- BOOK_API_URL=http://book-service:8080/api/books
+2. Frontend Java Code: Calling the API (Java 11+ HttpClient) (This replaces the direct bookRepository.findAll() call in your UI Servlet) Java import java.net.http.HttpClient; import java.net.http.HttpRequest; import java.net.net.URI; import java.net.http.HttpResponse;
+
+// Inside your Frontend Servlet doGet():
+String apiUrl = System.getenv("BOOK_API_URL"); // Gets "http://book- service:8080/api/books" HttpClient client = HttpClient.newHttpClient(); HttpRequest request = HttpRequest.newBuilder() .uri(URI.create(apiUrl)) .GET() .build(); HttpResponse<String> apiResponse = client.send(request, HttpResponse.BodyHandlers.ofString()); // apiResponse.body() now contains the JSON String from the Book Service!
+// Pass this JSON (or map it back to a DTO) to your JSP.
+Definition of Done (DoD)
+Demonstrate the following to the Agile Coach:
+1. Run docker-compose up -d --build in your terminal.
+2. Open localhost:8080 in your browser. Verify the Frontend UI loads.
+3. Show that the UI successfully displays the list of books (proving that the Frontend Container successfully communicated with the Book Service Container via the internal Docker network).
+4. Run docker-compose down and show that the application is completely shut down.
+
+--- Sprint_15_Backlog_Bonus_GitLab_CI_CD_Pipeline_Setup_Thesis_Management.txt ---
+
+Sprint 15 Backlog: GitLab CI/CD
+Pipeline Setup
+Sprint Goal: Automate the integration and delivery process to ensure that only tested, compiling code is packaged into our Thesis Management Docker image.
+User Story
+As a Lead Developer, I want to establish a CI/CD pipeline in GitLab, So that every code commit is automatically compiled, tested (JUnit), and packaged without human intervention, maintaining high code quality.
+Task Board (To-Do)
+1. Pipeline Configuration: Create a .gitlab-ci.yml file in the project root.
+2. Define Stages: Set up three stages: test, build, and dockerize.
+3. Test Stage: Run mvn test to execute the Hexagonal Architecture Unit Tests (e.g., CreateThesisServiceTest).
+4. Build Stage: Run mvn package to generate the .war file and save it as a GitLab Pipeline Artifact.
+5. Dockerize Stage: Build the Docker image to ensure the Dockerfile is valid (Bonus:
+Push to GitLab Container Registry).
+Acceptance Criteria
+• [ ] Pushing code to the main branch automatically triggers the GitLab Pipeline.
+• [ ] If a student introduces a failing test (e.g., breaking the title validation in CreateThesisService), the pipeline fails at the test stage with a red cross .
+• [ ] A successful pipeline run produces a green checkmark and saves the .war file in the artifact repository.
+Starter Code: .gitlab-ci.yml
+YAML
+# Define the Docker image to use for the CI/CD runner image: maven:3.9-eclipse-temurin-17 # Define the sequence of pipeline stages
+stages:
+- test
+- build
+- dockerize # Caching Maven dependencies speeds up pipeline execution
+
+cache:
+paths:
+- .m2/repository # STAGE 1: Run JUnit Tests
+unit_testing:
+stage: test
+script:
+- echo "Running Hexagonal Architecture Domain & Use Case Tests..."
+- mvn clean test # STAGE 2: Build the Artifact
+package_application:
+stage: build
+script:
+- echo "Compiling the application and generating the .war file..."
+- mvn clean package -DskipTests
+artifacts:
+paths:
+- target/thesis-app.war expire_in: 1 week # STAGE 3: Verify Docker Build (Using Docker-in-Docker)
+build_docker_image:
+stage: dockerize image: docker:20.10.16
+services:
+- docker:20.10.16-dind
+variables:
+DOCKER_TLS_CERTDIR: "/certs"
+script:
+- echo "Building the Docker image to verify the Dockerfile..."
+- docker build -t thesis-management-app:latest .
+
+--- Sprint_15_Backlog_GitLab_CI_and_CD_Pipeline_Setup_Starter_Kit_01.txt ---
+
+Sprint 15 Backlog: GitLab CI/CD Pipeline
+Setup
+Epic: As a Development Team, we want to automate the build, test, and containerization process of our LibraryWeb project using GitLab CI/CD, so that we can guarantee the main branch is always stable and a ready-to-deploy Docker image is automatically generated.
+User Stories & Acceptance Criteria
+User Story 1: Initialize the Pipeline & Stages
+As a developer, I want to establish the basic structure of our CI/CD pipeline so that jobs run in the correct chronological order.
+• [ ] Create a file named exactly .gitlab-ci.yml in the root directory of your repository.
+• [ ] Define the four core stages at the top of the file: compile, test, package, and dockerize.
+• [ ] Commit and push the file. Verify in the GitLab UI (under Build -> Pipelines) that a pipeline was triggered (even if it does nothing yet).
+User Story 2: Automate Maven Build & JUnit Tests
+As a QA engineer, I want the pipeline to compile our Java code and run all unit tests in a clean environment.
+• [ ] Create a job named build-java in the compile stage using the maven:3.9.4- eclipse-temurin-17 image that runs mvn clean compile.
+• [ ] Create a job named test-java in the test stage using the same image that runs mvn test.
+• [ ] Create a job named package-app in the package stage that runs mvn package.
+• [ ] Crucial: In the package-app job, define an artifacts block to save the generated target/*.war file so it can be passed to the next stage. Set it to expire in 1 hour.
+User Story 3: Build & Push to GitLab Container Registry
+As a DevOps engineer, I want the pipeline to build our Docker container and push it securely to our private GitLab Registry.
+• [ ] Create a job named build-and-push-docker in the dockerize stage.
+• [ ] Use the docker:24.0.5 image and the docker:24.0.5-dind service (Docker-in- Docker).
+• [ ] Write a script that logs into the registry using the predefined variables: docker login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD.
+
+• [ ] Build the image and tag it properly: docker build -t
+$CI_REGISTRY/$CI_PROJECT_PATH/libraryweb:latest .
+• [ ] Push the image to the registry: docker push
+$CI_REGISTRY/$CI_PROJECT_PATH/libraryweb:latest.
+• [ ] Add a rules block so this job only runs if the commit is on the main branch.
+User Story 4: Test the Safety Net (Break the Build)
+As a Team Lead, I want to verify that the pipeline actually catches bad code before it merges into main.
+• [ ] Create a new feature branch (e.g., feature/break-test).
+• [ ] Intentionally change a JUnit test so that it fails (e.g., assertEquals(1, 2);).
+• [ ] Push the branch and open a Merge Request (MR) in GitLab.
+• [ ] Verify that the pipeline fails at the test stage and GitLab shows a red "Pipeline failed" warning, blocking the merge.
+• [ ] Fix the test, push again, and verify the pipeline turns green.
+Starter Code Snippets
+1. The .gitlab-ci.yml Blueprint
+YAML
+# Define the chronological order of execution
+stages:
+- compile
+- test
+- package
+- dockerize # Job 1: Compile the code
+build-java:
+stage: compile image: maven:3.9.4-eclipse-temurin-17
+script:
+- echo "Compiling the code..."
+- mvn clean compile # Job 2: Run the tests
+test-java:
+stage: test image: maven:3.9.4-eclipse-temurin-17
+script:
+- echo "Running JUnit tests..."
+- mvn test # Job 3: Create the .war file and save it as an Artifact
+package-app:
+stage: package image: maven:3.9.4-eclipse-temurin-17
+script:
+
+- echo "Packaging the application..."
+- mvn package
+artifacts:
+paths:
+- target/*.war expire_in: 1 hour # Don't waste server storage! # Job 4: Build Docker Image and push to GitLab Registry
+build-and-push-docker:
+stage: dockerize image: docker:24.0.5
+services:
+- docker:24.0.5-dind
+rules:
+- if: $CI_COMMIT_BRANCH == "main" # Only run on main branch!
+script:
+- echo "Logging into GitLab Container Registry..."
+- echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
+- echo "Building the Docker Image..."
+- IMAGE_TAG=$CI_REGISTRY/$CI_PROJECT_PATH/libraryweb:latest
+- docker build -t $IMAGE_TAG .
+- echo "Pushing the Image..."
+- docker push $IMAGE_TAG
+Definition of Done (DoD)
+Demonstrate the following to the Agile Coach:
+1. Open your project in the GitLab web interface.
+2. Navigate to Build -> Pipelines and show a completely green pipeline for your main branch.
+3. Click on the package-app job and demonstrate that you can download the .war artifact directly from the web browser.
+4. Navigate to Deploy -> Container Registry and show that your libraryweb:latest Docker Image has been successfully uploaded by the CI/CD pipeline.
+
+--- Lecture_02_Advanced_Design_Patterns.txt ---
+
+From C++ to Java Design Patterns
+ICSI486: Software Construction
+Week 02 – Mastering Object Creation
+Deep Dive into Singleton & Factory Methods
+National University of Mongolia Batnyam Battulga, Ph.D., Dipl.-Ing., Dipl.-Inf.
+
+The Bridge
+From C++ Control to Java Management
+C++ Paradigm Java Paradigm
+Manual Memory Control JVM Managed Memory
+Stack vs. Heap:Explicit choice. Heap Only: Objects live on the heap.
+References are essentially "safe pointers".
+Requires explicit memory management (delete).
+No pointer arithmetic. Safer memory access.
+Direct pointer manipulation allowed.
+The Static Connection
+The Goal
+In both languages, static members belong to the Class itself, not any specific instance. This shared scope is the foundation for the Singleton Pattern.
+
+The Problem
+Naive Singleton & The Race Condition
+UML Sequence Diagram
+Scenario
+Two threads (A & B) access the Singleton getter simultaneously. The :Thread A DbConnSingleton :Thread B lack of atomicity in "Check-Then-Act" leads to failure. getInstance()
+1. if (null) →TRUE
+Context Switch (A paused) getInstance()
+2. if (null) →TRUE
+3. new DbConn() return Obj #1
+4. A resumes inside 'if'
+5. new DbConn() return Obj #2
+Race Condition
+Thread B interrupts Thread A after the null-check but before
+Failure: 2 Instances initialization.
+
+The Solution
+Double-Checked Locking (DCL)
+DbConnSingleton 1 Check null (Fast)
+- instance : DbConnSingleton {volatile} Avoids locking overhead if initialized.
+- DbConnSingleton() + getInstance() : DbConnSingleton 2 Synchronize Enters critical section (only 1 thread). DbConnSingleton.java 3 Double Check Essential safety check inside lock. volatile Prevents reordering & ensures visibility. Tip:Use Holder Idiomfor simpler lazy loading.
+
+The "Anti-Pattern"
+When to Avoid Singletons
+Critical Drawbacks The Modern Alternative
+Testing Nightmare Dependency Injection (DI)
+Singletons introduce hidden dependenciesinside methods. Mocking Enterprise Standard (Spring, Guice) `static` methods is difficult (requires Powermock) and leads to brittle tests. Instead of asking for dependencies ("Give me the Logger"), classes declare them ("I need a Logger"). The framework handles the lifecycle (Singleton Scope).
+Global State
+State persists between unit tests. Test A modifies the Singleton, causing Test B to fail mysteriously. Violates test isolation.
+SRP Violation
+The class manages its own lifecycle ANDits business logic. It does too much.
+
+The Problem with "New"
+Tight Coupling & Principle Violations
+SOLID Open-Closed Principle "Software entities should be open for extension, but closed for CourseEnrollment.java modification." Extension Modification
+Why this code fails:
+If we introduce a new requirement tomorrow:
+Need to support ExchangeStudent
+Need to support Instructor
+Result: You must rewrite (modify) the enrollUsermethod every time.
+This class is now married to 'Student' forever.
+The Goal
+Decouple creation from use.
+
+Pattern 2 – Factory Method
+Decoupling via Abstraction
+Roles
+Product Interface
+Creator Factory
+Benefits
+No newin Client
+Centralized logic
+OCP:New types don't break clients.
+
+Factory Implementation
+Programming to an Interface
+UserFactory.java
+1 The Interface
+The client relies only on ThesisUser. It doesn't know (and doesn't care) that the actual object is a Student. This is Loose Coupling.
+2 Centralized Creation
+Complex logic like ID generation, validation, or dependency injection happens here, not in the client code.
+3 Clean Client Code
+The client simply requests a type via create(). No newkeyword in the main application logic.
+Avoid "Stringly-Typed" Code:
+Don't pass strings like "student" to your factory. Use an enum
+UserTypeto catch typos at compile time!
+
+Lab Exercise
+Sprint 1: User Stories & Implementation
+Assignment:Work in pairs. Implement these stories using Test-Driven Development (TDD). Focus on thread safety and decoupling.
+US-101 5 pts US-102 8 pts
+Thread-Safe Logger User Factory
+As aDevOps Engineer, As aProduct Owner, I wanta global logging service shared by all threads, I wantto create users based on configuration, So thatI can trace errors across the system without race conditions. So thatwe can add new roles (e.g.Exchange Student) without rewriting client code.
+Acceptance Criteria Acceptance Criteria
+JUnit assertSame()passes for multiple requests. create(type, name)always returns ThesisUserinterface.
+Logs from 100 concurrent threads are preserved (no overwrites). Client code contains ZERO usage of the newkeyword for users.
+Implementation uses DCLor Enumpattern. New types can be added by modifying only the Factory.
+Submission
+Git Repo (clean history) Green JUnit 5 Tests UML Sketch (PDF/PNG) Deadline: Friday 23:59
+Definition of Done
+
+Common Pitfalls
+Singleton & Factory Mistakes to Avoid
+PitfallsComparison.java
+The volatile Trap
+Without volatile, the JVM might reorder instructions. Thread B could see a non-null instthat points to memory not yet fully initialized by the constructor.
+Serialization Breaks Singletons
+Deserializing a Singleton creates a new instance! Fix:Implement readResolve()to return the existing instance.
+Factory: "Stringly-Typed"
+Avoid create("student"). Typos cause runtime crashes. Fix:Use Enums (UserType.STUDENT) for compile-time safety.
+Best Practice:
+Use a single-element enum for Singletons if you don't need lazy loading or inheritance. It handles serialization and reflection attacks automatically!
+
+Race Condition Demo
+Singleton Thread-Safety
+LIVE
+Test Harness Setup Java
+Demo Sequence (5-8 Min)
+// 1. Executor Setup
+1
+Setup NaiveSingletonwith artificial delay (10ms) in ExecutorService pool = Executors.newFixedThreadPool(100); constructor. // 2. Concurrent Set to track unique instances Set<Object> instances = ConcurrentHashMap.newKeySet(); 2 Launch 100 Threadsvia ExecutorService calling // 3. Mass Execution getInstance(). for(int i=0; i<1000; i++) { pool.submit(() -> instances.add(Singleton.getInstance())); Observe Multiple Instancescreated (Count > 1). FAIL 3 } FAIL 4 Apply Fix: Double-Checked Lockingwith volatile.
+5 Re-run: Exactly 1 Instancecreated. PPAASSSS
+Key Discussion
+Atomicity: The "check-then-act" gap is where threads race.
+Visibility:Without volatile, threads might see half- objects.
+Performance:Why we check twice (avoid locking every time). Instructor Note
+Set a breakpoint inside the constructor before the assignment. It makes the race condition easy to visualize.
+
+Real-World Examples
+Patterns in Modern Frameworks
+App Frameworks Infrastructure
+IoC & Lifecycle Management Resource & Logging Management
+Spring Boot (Java) JDBC Connection Pools
+Beans are Singletonsby default (Container-Managed). HikariCP / DataSource:Shared resource management.
+Factory creates connections; Pool (Singleton) manages them.
+Logging (SLF4J/Log4j)
+Android SDK Logger Factories provide effectively singleton instances per class.
+Application Contextacts as a global Singleton.
+Risk: Context leaks causing Memory Leaks.
+Fix: Use DI frameworks like Hilt/Dagger.
+Testing Advice
+Pro Tip
+Don't let Singletons ruin your Unit Tests. Use Dependency Injection to inject Mocks instead of hard-wiring static Singletons. For legacy code, ensure resource reset in @AfterEach.
+
+Summary & Outlook
+Week 02 Recap & Next Steps
+Key Takeaways
+What's Next-
+Lab Session (This Week)
+Respect Thread Safety Implement Thread-Safe Logger & UserFactory.
+Practice TDD.
+When using Singleton for shared resources (DB, Logs), always ensure thread safety using volatile with Double-Checked Locking or the Holder Idiom. Week 03: Inversion of Control Moving from manual Factories to Dependency Injection (Spring Framework).
+Decouple with Factories
+Avoid the newkeyword in business logic. Use Factory Methods to encapsulate creation complexity and support the Open-Closed Principle.
+Reading List
+Effective Java
+Program to Interfaces EJ
+Items 1-5 (Static Factories, Singletons)
+Clients should depend on abstractions (ThesisUser), not concrete
+Design Patterns implementations (Student). This makes your system testable and
+GoF flexible. Chapter: Creational Patterns "Object creation is architecture. Good factories and careful singletons save you hours of debugging later."

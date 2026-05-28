@@ -1,0 +1,47 @@
+Lab 10 Sprint 10 Backlog: Secure
+Authentication
+Epic: As a system administrator, I want to secure the web application using Session Management so that only authenticated users can access, create, or modify data.
+User Stories & Acceptance Criteria
+User Story 1: The Login View & Controller
+As a user, I want to see a login page and submit my credentials.
+• [ ] A login.jsp is created with a POST form containing username and password inputs.
+• [ ] A LoginServlet handles the POST request.
+• [ ] If credentials are valid (hardcode admin / password123 for this sprint, or use the DB if ready), the user object is stored in request.getSession().setAttribute("user", username).
+• [ ] If invalid, the user is redirected to login.jsp-error=invalid.
+User Story 2: The Bouncer (Route Protection)
+As a security officer, I want to ensure that no unauthenticated user can access the dashboard.
+• [ ] The DashboardServlet checks the session for the "user" attribute before loading any data.
+• [ ] If the attribute is null, the servlet immediately issues a response.sendRedirect(request.getContextPath() + "/login") and returns.
+• [ ] Only authenticated users can see the dashboard JSP.
+User Story 3: The Logout Mechanism
+As an authenticated user, I want to securely end my session.
+• [ ] A "Logout" link is added to the main navigation (only visible if logged in).
+• [ ] A LogoutServlet handles the request by calling session.invalidate().
+• [ ] The user is redirected back to the login page after successful logout.
+
+Starter Code Snippets
+1. LoginServlet.java (The Authentication Handler)
+Java
+@WebServlet("/login") public class LoginServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // Show the login form request.getRequestDispatcher("/WEB- INF/views/login.jsp").forward(request, response); } @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { String user = request.getParameter("username"); String pass = request.getParameter("password"); // TODO: Replace hardcoded check with your Domain Core (e.g., UserRepository) if ("admin".equals(user) && "password123".equals(pass)) { // Success: Create session and store user HttpSession session = request.getSession(); session.setAttribute("loggedInUser", user); // Post-Redirect-Get pattern response.sendRedirect(request.getContextPath() + "/dashboard"); } else { // Failure: Redirect back with error flag response.sendRedirect(request.getContextPath() + "/login-error=true"); } } }
+2. DashboardServlet.java (The Bouncer Pattern applied)
+Java
+@WebServlet("/dashboard") public class DashboardServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { HttpSession session = request.getSession();
+
+// --- THE BOUNCER --- if (session.getAttribute("loggedInUser") == null) {
+// Not authenticated! Kick them out. response.sendRedirect(request.getContextPath() + "/login"); return; // CRITICAL: Stop executing the rest of the method } // ------------------- // If we reach this line, the user is authenticated.
+String currentUser = (String) session.getAttribute("loggedInUser"); request.setAttribute("welcomeMessage", "Welcome back, " + currentUser); request.getRequestDispatcher("/WEB- INF/views/dashboard.jsp").forward(request, response); } }
+3. LogoutServlet.java (Session Invalidation)
+Java
+@WebServlet("/logout") public class LogoutServlet extends HttpServlet {
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+HttpSession session = request.getSession(false); // false means:
+don't create a new one if none exists if (session != null) { session.invalidate(); // Destroy the state on the server } response.sendRedirect(request.getContextPath() + "/login"); } }
+Definition of Done (DoD): Security Check-In
+Show the following to your Agile Coach (Instructor) at the end of the lab:
+1. Open a fresh "Incognito/Private" browser window.
+2. Attempt to navigate directly to http://localhost:8080/yourapp/dashboard. Verify you are bounced back to the login screen.
+3. Log in with correct credentials and see the dashboard.
+4. Click Logout, then press the browser's "Back" button. Attempt to refresh the dashboard.
+Verify you are bounced to the login screen again (proving the session was truly destroyed).

@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "Room Booking Microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "studentBaseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "roomBaseUrl",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "bookingBaseUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "notificationBaseUrl",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "bookingId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Students - list",
+      "request": {
+        "method": "GET",
+        "url": "{{studentBaseUrl}}/students"
+      }
+    },
+    {
+      "name": "Rooms - list",
+      "request": {
+        "method": "GET",
+        "url": "{{roomBaseUrl}}/rooms"
+      }
+    },
+    {
+      "name": "Bookings - create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": 1,\n  \"roomId\": 1,\n  \"bookingDate\": \"2026-06-01\",\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"10:00:00\",\n  \"purpose\": \"Microservice demo\"\n}"
+        },
+        "url": "{{bookingBaseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Bookings - list",
+      "request": {
+        "method": "GET",
+        "url": "{{bookingBaseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Bookings - approve",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"adminId\": 2,\n  \"rejectReason\": null\n}"
+        },
+        "url": "{{bookingBaseUrl}}/bookings/{{bookingId}}/approve"
+      }
+    },
+    {
+      "name": "Notifications - list",
+      "request": {
+        "method": "GET",
+        "url": "{{notificationBaseUrl}}/notifications"
+      }
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+WEEK 07 ICSI486 Software Construction PHASE 2: MASTERING THE PRIMARY ADAPTER
+Advanced CRUD &
+Exception Handling
+Topic: Master-Detail Pattern & A UI Design
+Lecturer
+Institution
+B B Batnyam Battulga, Ph.D.
+National University of Mongolia
+
+Recap – Where Are We Now-
+Week 07: Advanced CRUD
+Accomplishments of Week 6 Current State of our App
+Built a JFrame Layout
+C Create Save Button Working
+Structured the main application window using BorderLayout for proper component placement.
+R Read JTable Display Working
+Implemented TableModel
+Applied the Adapter Pattern to bridge our Domain Entities
+(List<Thesis>) to the Swing GUI.
+Handled User Events
+Used ActionListener (Observer Pattern) to capture button clicks and save new data.
+Without Update and Delete, the database will accumulate stale or incorrect data indefinitely.
+ICSI486 Software Construction Page 2
+
+Learning Objectives for Week 7
+Goals & Outcomes
+Master the Full CRUD Cycle
+Implement Update and Delete workflows to complete the data lifecycle management.
+Understand the Master-Detail Pattern
+Use table selections (Master) to drive detail forms, enabling intuitive data navigation.
+Manage UI State
+Track entity identities (ID) safely in the Controller to maintain context between user actions.
+Implement Defensive UI
+Prevent destructive actions using confirmation dialogs and validation checks before execution.
+Handle Exceptions Gracefully
+Catch Domain/DB errors and present them user-friendly without crashing the application.
+ICSI486 Software Construction Page 3
+
+The UI Challenge for Update & Delete
+Design Problem
+The Problem Bad UX The Goal
+To call deleteThesis(id) or updateThesis(id, ...), our Core needs the Primary Key (ID).
+The user should just click on the data they want to modify.
+Asking user to manually type ID.
+The database cannot identify which record to Users don't know database IDs!
+modify without this unique identifier.
+High risk of typing errors.
+Intuitive selection • No manual ID entry
+ICSI486 Software Construction Page 4
+
+The Master-Detail Pattern
+Design Pattern
+A standard UI design pattern for data navigation where selecting an item from a list (Master) reveals its specific information in a separate area Master View Detail View Behavior (Detail). Summarized List Editable Form Instant Update Master View (JTable) Detail View (Form) ID Title Student 101 AI in Healthcare Bata 102 Blockcahin Vote Sarnai Thesis Title Selection Event Neural Networks 103 Neural Networks Tuya 104 Cloud Security Bold Student Name Tuya ICSI486 Software Construction Page 5
+
+Master-Detail in Action
+Workflow Visualization
+4️⃣
+1️⃣ 2️⃣ 3️⃣ 5️⃣
+Form Population
+User Action Event Detection Data Extraction Ready State
+UI populates the
+User clicks Row 3 in the UI detects the click event UI extracts Data from The user can now Edit JTextFields with extracted JTable master list. via Observer. Row 3 (Title, Student). text or click Delete.
+data.
+Master View (JTable) Detail View (Form)
+ICSI486 Software Construction Page 6
+
+Implementing Master-Detail in Swing
+Observer Pattern: ListSelectionListener
+To detect clicks, we attach a ListSelectionListener to the table's SelectionModel. This event fires whenever the row selection changes.
+ICSI486 Software Construction Page 7
+
+The Identity Problem – Primary Keys in UI
+Data Integrity
+Wait, what about the ID- Crucial Rule
+NEVER let the user edit the ID in a JTextField.
+The database absolutely needs the ID (Primary
+Exposing the ID for editing breaks data integrity
+Key) to perform specific operations:
+and confuses users who don't understand database keys.
+UPDATE theses SET title = '...' WHERE id = -;
+DELETE FROM theses WHERE id = -;
+Controller.java
+Where does the ID go-
+Title: "AI Thesis"
+It stays HIDDEN in the Controller!
+Student: "John Doe"
+The ID is invisible to the user on the screen, but essential for the system in the background.
+ID (State): 42
+ICSI486 Software Construction Page 8
+
+State Management in the Controller
+Controller Pattern
+We introduce State to our MainFrame (the Controller). A private variable tracks the identity of the currently selected row, keeping the ID hidden from the user but accessible to the logic.
+Null-Check Logic determines the Mode
+The state variable currentlySelectedId acts as the single source of truth for the UI mode.
+null non-null
+CREATE Mode UPDATE Mode
+No row selected. Saving creates a new record. Row selected. Saving updates existing record.
+ICSI486 Software Construction Page 9
+
+The Delete Workflow
+Goal: Remove record permanently
+Standard Execution Flow
+1 2 3 4
+Select Row Click Delete DB Deletes UI Refreshes
+User clicks item in Master table Triggers action listener event SQL DELETE statement execution Reload data to reflect changes Golden Rule of UX The Danger "Never execute a destructive action Destructive actions are permanent. If a user misclicks, data is lost forever. This creates anxiety instantly without warning the user." and poor user experience.
+ICSI486 Software Construction Page 10
+
+Defensive UI: Confirmation Dialogs
+Swing: JOptionPane
+Swing's JOptionPane creates modal dialogs that block user interaction until a decision is made. This is critical for preventing accidental data loss during destructive actions.
+ICSI486 Software Construction Page 11
+
+Implementing the Delete Action
+Destructive Action
+Tying it all together in the Controller: We combine state checking, user confirmation, and the service call into a single robust workflow.
+Clean-up Protocol
+The 3-Step Post-Delete Cleanup
+1100 }
+111A1ft}e)r; a successful deletion, the UI must immediately reflect the change to prevent "ghost" data.
+1 2 3
+Service Reset Reload
+Execute deletion in the Core/Database layer. Clear the currentlySelectedId variable to null. Fetch fresh data list and repaint the JTable.
+ICSI486 Software Construction Page 12
+
+The Update Workflow – Reusing the Form
+Logic Flow
+The UX Challenge The Elegant Solution
+We have a "Save" button from Week 6. Should we add a second "Update" Reuse the form! The "Save" button decides internally based on state.
+button- It checks: currentlySelectedId
+Adding more buttons clutters the UI and confuses users.
+User Clicks
+"Save" check state
+YES (Null) currentlySelectedId NO (Has Value)
+== null-
+Create New Update
+Thesis Existing thesisService.create(...) thesisService.update(id, ...)
+Page
+ICSI4 8 6 Software Construction
+1 3
+
+Adapting the Save Button Logic
+Logic: Conditional CRUD + Error Handling
+The Save button reuses the form for both actions. It checks the hidden state (currentlySelectedId) to decide whether to Create or Update, while wrapping operations in a try-catch block for safety.
+ICSI4 8 6 Software Construction Page 1 4
+
+Robustness & Error Handling
+Week 07: Advanced CRUD
+What if things go wrong- The Goal: Graceful Degradation
+Common Triggers A robust system should never crash due to expected errors. It should handle failures gracefully Database server crashes or network fails without losing data or closing the window.
+User enters invalid data (e.g., empty Title)
+Robustness Strategy
+Catch at the Boundary
+The UI (Primary Adapter) is the last line of defense. Catch all exceptions here.
+If we do nothing (The Cascade)
+Inform the User
+1 Core throws an Exception
+Translate technical stack traces into readable, helpful dialog messages.
+2 Stack trace prints to Console (User can't see this!) Allow Recovery
+Let the user correct their input or try again without restarting the app.
+3 GUI freezes or crashes completely
+Result: Happy User, Stable
+App
+ICSI486 Software Construction Page 15
+
+The Hexagonal Error Flow
+Architecture & Exception Handling
+Primary Adapter (User Side) Hexagon Center (Logic) Secondary Adapter (Infra)
+The Boundary
+GUI / Controller Database / DAO
+Core / Domain
+MainFrame.java TOesisDAO.java
+TOesisService.java try { IllegalArgumentException
+// Call Service
+} catch (Exception e) { Passes through... SQLException
+// Show Dialog
+JOptionPane.show...();
+}
+Does N O T caPcO excepPions. Origin of PecOnical errors.
+CATCH ALL
+ValidaPes daPa. (ConnecPion losP, ConsPrainP violaPion)
+Architecture Rule
+The GUI is the last line of defense. It must catch ALL exceptions to prevent a crash.
+ICSI4 8 6 Software Construction Page 1 6
+
+Graceful Degradation in the UI
+Defensive Programming
+The UI must catch ALL exceptions at the boundary. Use a layered try-catch strategy to distinguish between user mistakes and system failures.
+Two-Layer Catch Strategy
+Layer 1: Domain Errors
+Specific exceptions (e.g., validation) caused by user actions.
+IllegalArgumentException
+Layer 2: System Errors
+Unexpected failures (DB offline, Network) not caused by the user.
+Exception SQLException
+ICSI486 Software Construction Page 17
+
+Displaying Errors to the User
+Defensive UI Pattern
+Never print ex.printStackTrace() in a UI application—users don't read the console! Instead, catch the exception and use JOptionPane to show a visible modal dialog.
+MainFrame.java
+1 try {
+2 thesisService.updateThesis(currentId, title, student);
+3 } catch (IllegalArgumentExceptionex) {
+4 // BAD: Users won't see console logs!
+5 // ex.printStackTrace();
+6
+7 // GOOD: Show a modal error dialog
+8 JOptionPane.showMessageDialog(
+9 frame, // Parent component
+10 "Error saving data: " + ex.getMessage(), // Message
+11 "Validation Error", // Title
+12 JOptionPane.ERROR_MESSAGE// Icon Type
+13 );
+14 }
+ICSI486 Software Construction Page 18
+
+The "Clear" / "Cancel" Action
+UX Pattern: Reset State
+Users can get "stuck" in Update mode after selecting a row. We provide a Clear Button to unselect the table, reset the hidden ID state to null, and empty the text fields for a new entry.
+MainFrame.java
+// "New Thesis" or "Clear Selection" button listener
+2 clearButton.addActionListener(e -> {
+// 1. Visually unselect the row in the table
+5 table.clearSelection();
+// 2. Reset the hidden state (Critical!)
+8 currentlySelectedId = null;
+// 3. Clear the input fields
+11 titleField.setText("");
+12 studentField.setText("");
+14});
+Page
+ICSI4 8 6 Software Construction
+1 9
+
+Summary – Week 07 Key Takeaways
+Review
+CRUD is Complete Master-Detail is Powerful
+With the implementation of Update and It simplifies navigation significantly. By
+Delete, our hexagonal adapter is fully clicking rows, we prevent data entry functional. The database lifecycle is errors and avoid the bad UX of manually closed. typing IDs.
+State Management Defensive UI is Mandatory
+Controllers must securely hold variables Never allow destructive actions without
+(like ) to track context confirmation. Always catch exceptions at currentlySelectedId between user clicks. the UI boundary to prevent application crashes.
+ICSI486 Software Construction Page 20
+
+Lab Mission – Week 07
+Practical Assignment
+Update the Core TASK 01
+Ensure your Core/DAO supports update() and delete() methods.
+Master-Detail Wiring
+TASK 02
+Implement ListSelectionListener to populate form fields on click.
+Safe Deletion
+TASK 03
+Launch Time!
+Add the Delete button with a mandatory JOptionPane confirmation dialog.
+See you in the Lab!
+Smart Save Logic TASK 04
+Modify Save button to handle both Create (null ID) and Update (existing ID).
+SYSTEM STATUS:
+READY
+Error Handling TASK 05
+Force an error (e.g., save empty Title) and catch it with a red Error-Dialog.
+ICSI486 Software Construction Page 21

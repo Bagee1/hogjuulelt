@@ -1,0 +1,381 @@
+SD
+XX pleo rs fs==10..0001
+Software Design and Quality
+An Introduction into JUnit
+VorlesungProgrammierenWintersemester2016/17
+ErikBurger|8February2017
+CHAIRFORSOFTWAREDESIGNANDQUALITY www.kit.edu
+KIT–TheResearchUniversityintheHelmholtzAssociation
+
+Outline – Testing
+1 ClassificationofTests
+2 Test-drivendevelopment
+1 Definition
+2 Refactoring
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 2/46
+
+Outline – JUnit
+3 Overview
+4 Assertions
+5 Fixtures
+1 Definition
+2 Example
+3 ParameterisedTests
+4 TestSuites
+6 EclipseIntegration
+1 TestRunners
+2 Screenshot
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 3/46
+
+Foreword
+Programtestingcanbeusedtoshowthepresenceofbugs,but nevertoshowtheirabsence!
+Dijkstra1972
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 4/46
+
+Classification of Tests
+Functional Tests
+Correctnessaccordingtospecification
+Concurrency/Threadsafeness
+Non-Functional
+Performance
+Security
+Usability
+Interoperability
+Reliability
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 5/46
+
+Classification of Tests
+Knowledge black-boxtests white-boxtests
+Structure
+Unit
+Integration
+System
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 6/46
+
+Test-Driven Development
+“Test-infected development” (Erich Gamma)
+Asadeveloper,youcan’tstopcodinguntileverythingworks
+ExtremeTesting
+Testingismoreimportantthancoding
+TestingFirst
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 7/46
+
+Test-Driven Development
+1. addtests
+3. simplify/refactorcode
+JUnit: Failure JUnit: OK
+2. fulfiltests
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 8/46
+
+Isolated Testing
+Objectorientedclassesoftenhavedependenciesonotherclasses
+Alotofclassescannotbetestedindependently
+→microintegrationtests
+Startingfromacertaindegreeofdependencies,testeffortrises disproportionatelyhigh
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 9/46
+
+Isolated Testing
+Testrepresenttypicalusagescenarios
+Lessdependencies→easiertouse
+Highdegreeofdependencies
+Lackofmodularisation-
+Baddesign-
+Badcodedependencymanagement
+→Refactoring
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 10/46
+
+Refactoring
+Keepyourcodesimple–always
+Refactor code
+Beforetesting–fulfiltestwithsimplecode
+Aftertesting–makecodemoresimple
+Without changing semantics you can
+Divideormergeclasses
+Movemethodsandattributetootherclasses
+Renameclasses,methods,parameters,andvariables
+Extractorintegratemethods
+Replaceinheritancebydelegationandviceversa
+Introduceinterfaces
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 11/46
+
+Challenges for Testing Large-Scale
+Systems
+Building test environments is time-consuming
+Classdependenciesrequireinstantiationofmultipleobjectsthathavetobe configured
+Tests slow down if system borders are crossed
+Interactionbetweendatabaseandmiddlewarecreatesdelays
+Testing exceptional circumstances is non-trivial
+Difficulttoreproducesystemfaults
+→Keeptestssimple,fastandcoherent
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 12/46
+
+Bad smells
+See[Fowler2004]
+Duplicated logic
+Copiesaredifficulttohandle
+Usuallyeachcopystartitsownlife
+Leadstospreadinformation
+Hardtomanagechanges
+Big classes and long methods
+Hindermobility,localisation,usage,anddocumentation
+Mediumforduplicatedcode
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 13/46
+
+Bad smells
+Bad naming and non-fitting code-structures
+Increaseeffortforlearninghowtheprogramworks
+Speculative generalisation
+Elementsofdesignformerlyintendedtomakecodeflexible–butnever used
+Comments
+Oftenusedasdeodorantforbadsmells
+Needlessafterrefactoring
+Donotmixupwithcommentsusedfor
+Designdecisions
+Documentationofpublicinterfaces(Javadoc)
+References
+ClassificationofTests Test-drivendevelopment
+ErikBurger–AnIntroductionintoJUnit 8February2017 14/46
+
+JUnit
+3 Overview
+4 Assertions
+5 Fixtures
+6 EclipseIntegration
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 15/46
+
+JUnit – Overview
+JUnit is a framework for writing tests
+JUnitusesJava’sreflectioncapabilities(Javaprogramscanexamine theirowncode)
+JUnithelpstheprogrammer:
+defineandexecutetestsandtestsuites formalizerequirementsandclarifyarchitecture writeanddebugcode integratecodeandalwaysbereadytoreleaseaworkingversion JUnitisnotincludedinSun’sSDK,butalmostallIDEsincludeit(e.g., Eclipse) Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 16/46
+
+JUnit
+History
+JUnitwaswrittenbyErichGamma(ofDesignPatterns)andKentBeck
+(creatorofXPmethodology)
+JUnitinspiredvariousotherunittestingframeworksforother programminglanguages,likeNUnit(.NET),CppUnit(C++) JUnitisthedefactostandardfortestdrivenJavadevelopment [Gammaetal.1994] Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 17/46
+
+JUnit 3 vs JUnit 4
+JUnit4
+JUnit4wasacompleteredevelopment includesideasfromotherframeworksandusesfeaturesofJava1.5 usesJavaannotations(suchas@Test) ThislectureisbasedonJUnit4 Junit5isunderdevlopmentforJava8 Be careful Many(web)tutorialsarestillbasedonJUnit3 JUnit4isbackwardscompatibletoversion3 JUnit4ismuchcleaner Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 18/46
+
+Terminology
+Atestfixturesetsupthedata(bothobjectsandprimitives)thatare neededtoruntests
+Example: Ifyouaretestingcodethatupdatesanemployeerecord,you needanemployeerecordtotestiton
+Aunittestisatestofasingleclass
+Atestcaseteststheresponseofasinglemethodtoaparticularsetof inputs
+Atestsuiteisacollectionoftestcases
+Atestrunnerissoftwarethatrunstestsandreportsresults
+Anintegrationtestisatestofhowwellclassesworktogether
+JUnitprovidessomelimitedsupportforintegrationtests
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 19/46
+
+Structure testrunner
+Aunittestteststhemethodsinasingle testsuite class unittest(foroneclass) Atestcasetests(insofaraspossible)a singlemethod testcase(foronemethod) anothertestcase Youcanhavemultipletestcasesfora singlemethod anotherunittest anothertestcase Atestsuitecombinesunittests anothertestcase Thetestfixtureprovidessoftware anothertestcase supportforallthis unittest(foroneclass) Thetestrunnerrunsunittestsoran testcase(foronemethod) entiretestsuite anothertestcase Integrationtestingisnotwellsupported testfixture byJUnit Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 20/46
+
+Test Case Verdicts
+Averdictisthedeclaredresultofexecutingasingletest.
+Pass: thetestcaseachieveditsintendedpurpose,andthesoftware undertestperformedasexpected.
+Fail: thetestcaseachieveditsintendedpurpose,butthesoftware undertestdidnotperformasexpected.
+Error: thetestcasedidnotachieveitsintendedpurpose.
+Potentialreasons:
+Anunexpectedeventoccurredduringthetestcase.
+Thetestcasecouldnotbesetupproperly
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 21/46
+
+What is a JUnit Test-
+A test “script” is just a collection of Java methods.
+GeneralideaistocreateafewJavaobjects,dosomethinginterestingwith them,andthendetermineiftheobjectshavethecorrectproperties.
+What is added- Assertions.
+Apackageofmethodsthatchecksforvariousproperties:
+“equality”ofobjects identicalobjectreferences null/non-nullobjectreferences
+Theassertionsareusedtodeterminethetestcaseverdict.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 22/46
+
+Organisation of JUnit Tests
+Eachmethodrepresentsasingletestcasethatcanindependently haveaverdict(Pass,Fail,Error).
+Normally,allthetestsforoneJavaclassaregroupedtogetherintoa separateclass.
+Namingconvention:
+Classtobetested: Value
+Classcontainingtests: ValueTest
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 23/46
+
+Writing a JUnit test class
+StartbyimportingtheseJUnit4classes import org.junit.* import static org.junit.Assert.*; // note static import Declareyourtestclassintheusualway public class MyProgramTest { } Declareaninstanceoftheclassbeingtested public class MyProgramTest { MyProgram program; int someVariable; } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 24/46
+
+A simple example import org.junit.*; import static org.junit.Assert.*; public class ArithmeticTest { @Test public void testMultiply() { assertEquals(4, Arithmetic.multiply(2, 2)); assertEquals(-15, Arithmetic.multiply(3, -5)); } @Test public void testIsPositive() { assertTrue(Arithmetic.isPositive(5)); assertFalse(Arithmetic.isPositive(-5)); assertFalse(Arithmetic.isPositive(0)); } } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 25/46
+
+Assertions
+Assertions are defined in the JUnit class Assert
+Ifanassertionistrue,themethodcontinuesexecuting.
+Ifanyassertionisfalse,themethodstopsexecutingatthatpoint,and theresultforthetestcasewillbefail.
+Ifanyotherexceptionisthrownduringthemethod,theresultforthe testcasewillbeerror.
+Ifnoassertionswereviolatedfortheentiremethod,thetestcasewill pass.
+Allassertionmethodsarestaticmethods.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 26/46
+
+Assertion Methods
+Boolean conditions are true or false assertTrue(condition) assertFalse(condition)
+Objects are null or non-null assertNull(object) assertNotNull(object)
+Objects are identical or not identical i.e. tworeferencestothesameobjectassertSame(expected, actual) assertNotSame(expected, actual) Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 27/46
+
+Assertion Methods
+“Equality” of objects assertEquals(expected, actual) validif: expected.equals(actual)
+“Equality” of arrays assertArrayEquals(expected, actual) arraysmusthavesamelength foreachvalidvaluefori,checkasappropriate:
+assertEquals(expected[i],actual[i]) assertArrayEquals(expected[i],actual[i])
+Thereisalsoanunconditionalfailureassertionfail()thatalwaysresultsin afailverdict.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 28/46
+
+Test Fixture
+Test Fixture
+Atestfixtureisthecontextinwhichatestcaseruns.
+Typically,testfixturesinclude:
+Objectsorresourcesthatareavailableforusebyanytestcase.
+Activitiesrequiredtomaketheseobjectsavailableand/orresource allocationandde-allocation: “setup”and“teardown”.
+Allowsmultipletestsofthesameorsimilarobjects
+Sharefixturecodeformultipletests
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 29/46
+
+Before/After
+@Before:Methodsannotatedwith@Beforeareexecutedbeforeevery test.
+@After:Methodsannotatedwith@Afterareexecutedaftereverytest.
+Iftherearee.g. 10test,every@Beforemethodisexecuted10times
+Morethanone@Beforeor@Afterisallowed
+Namesofthesemethodsareirrelevant,butmustbepublic void
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 30/46
+
+Fixture – Example public class MoneyTest { private Money f12CHF; private Money f14CHF; private Money f28USD; @Before public void setUp() { f12CHF= new Money(12, "CHF"); f14CHF= new Money(14, "CHF"); f28USD= new Money(28, "USD"); } } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 31/46
+
+Setup and Teardown
+Setup
+Usethe@Beforeannotationonamethodcontainingcodetorunbeforeeach testcase.
+Teardown (regardless of the verdict)
+Usethe@Afterannotationonamethodcontainingcodetorunaftereach testcase. Thesemethodswillrunevenifexceptionsarethrowninthetest caseoranassertionfails.
+It is allowed to have any number of these annotations
+Allmethodsannotatedwith@Beforewillberunbeforeeachtestcase,but theymayberuninanyorder.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 32/46
+
+BeforeClass/AfterClass
+@BeforeClass: executedoncebeforeatestsuite
+@AfterClass: executedonceafteratestsuite
+Onlyone@BeforeClassand@AfterClassallowed
+Methodsmustbestatic
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 33/46
+
+Fixture – Example public class MoneyTest { private static string currency;
+@BeforeClass public static void setGlobalCurrency() { this.currency = "CHF";
+}
+@Before public void setUp() { m12= new Money(12, this.currency); m14= new Money(14, this.currency); } } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 34/46
+
+Expected Exception
+Exceptionsthatareexpectedontestexecuting
+Annotationusing@Test
+@Test(expected=MyException.class)
+Ifnoexceptionisthrown,oranunexpectedexceptionoccurs,thetest willfail.
+Thatis,reachingtheendofthemethodwithnoexceptionwillcausea testcasefailure.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 35/46
+
+Expected Exceptions – example new ArrayList<Object>().get(0);
+ShouldthrowanIndexOutOfBoundsException
+@Test(expected = IndexOutOfBoundsException.class) public void empty() { new ArrayList<Object>().get(0); } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 36/46
+
+Ignore/Timeout
+Ignore
+Testsannotatedusing@Ignorearenotexecuted
+Testrunnerreportsthattestwasnotrun
+@Ignore("Reason")allowstospecifyareasonwhyatestwasnotrun
+Timeout
+Testallowstospecifyatimeoutparameter
+@Test(timeout=10)failsifthetesttakesmorethan10milliseconds
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 37/46
+
+Parameterised Tests
+Motivation
+Ifyouwantatesttorunwithseveralparametervalues,you’dhaveto loopoveracollectionofvalues whichmeansiftherewasafailure,theloopwouldn’tterminate writeuniquetestcasesforeachtestdatacombination whichcouldprovetobealotofcoding Support in JUnit WithJUnit,youcancreatehighlyflexibletestingscenarioseasily Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 38/46
+
+Parameterised Tests
+Creating a parameterised test
+1 Createagenerictestanddecorateitwiththe@Testannotation
+2 CreateastaticfeedermethodthatreturnsaCollectiontypeand decorateitwiththe@Parametersannotation 3 Createclassmembersfortheparametertypesrequiredinthegeneric methoddefinedinStep1 4 Createaconstructorthattakestheseparametertypesand correspondinglylinksthemtotheclassmembersdefinedinStep3 5 SpecifythetestcaseberunwiththeParameterizedclassviathe @RunWithannotation Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 39/46
+
+Parameterised Test – Example
+@RunWith(Parameterized.class) public class ParameterizedTest { private int numberToTest; private int rest; public ParameterizedTest(Integer pValue, Integer rValue) { numberToTest = pValue.intValue(); rest = rValue.intValue(); } @Parameters public static List<Integer[]> testValues() { return Arrays.asList(new Integer[][] { {1,1}, {3,1}, {6,0}, {7,1}, {9,1} }); } @Test public void isOdd() { assertTrue(numberToTest % 2 == rest); } } Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 40/46
+
+Test Suites
+Creating a test suite
+Testscanbecombinedtotestsuites suitescancontainothersuites usefulforpartitioningyourtestscenarios wellsupportedbyTestRunners(seeexample) Overview Assertions Fixtures EclipseIntegration References ErikBurger–AnIntroductionintoJUnit 8February2017 41/46
+
+Test Suite – Example import org.junit.runner.RunWith; import org.junit.runners.Suite;
+@RunWith(Suite.class)
+@Suite.SuiteClasses({
+MyTest1.class,
+MyTest2.class,
+MyTest3.class
+}
+) public class AllTests {
+}
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 42/46
+
+Running JUnit Tests
+TheJUnitframeworkdoesnotprovideagraphicaltestrunner. Instead, itprovidesanAPIthatcanbeusedbyIDEstoruntestcasesanda textualrunnerthancanbeusedfromacommandline.
+EclipseandNetbeanseachprovideagraphicaltestrunnerthatis integratedintotheirrespectiveenvironments.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 43/46
+
+Test Runners
+With the runner provided by JUnit:
+Whenaclassisselectedforexecution,allthetestcasemethodsinthe classwillberun.
+Theorderinwhichthemethodsintheclassarecalled(i.e. theorderof testcaseexecution)isnotpredictable.
+Other Runners
+TestrunnersprovidedbyIDEsmayallowtheusertoselectparticular methods,ortosettheorderofexecution.
+Itisgoodpracticetowritetestswithareindependentofexecution order,andthatarewithoutdependenciesonthestateanyprevious test(s).
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 44/46
+
+Eclipse TestRunner
+Eclipse
+JUnitincluded
+GUIprovided easyre-runningoftests testhistory
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 45/46
+
+References
+E.W.Dijkstra.“NotesonStructuredProgramming”. In:Structured programming.Ed.byO.J.Dahl,E.W.Dijkstra,andC.A.R.Hoare.
+London,UK:AcademicPressLtd.,1972. ISBN:0-12-200550-3.
+MartinFowler.Refactoring:improvingthedesignofexistingcode.
+13.print.Addison-Wesleyobjecttechnologyseries.Boston:
+Addison-Wesley,2004. ISBN:0-201-48567-2.
+E.Gammaetal.DesignPatterns:ElementsofReusable
+Object-OrientedSoftware(AdobeReader). PearsonEducation,1994.
+ISBN:9780321700698.
+FrankWestphal.TestgetriebeneEntwicklung–mitJUnit&FIT:wie
+Softwareänderbarbleibt. 1.Heidelberg:dpunkt-Verlag,2006. ISBN:
+3-89864-220-8.
+Overview Assertions Fixtures EclipseIntegration References
+ErikBurger–AnIntroductionintoJUnit 8February2017 46/46

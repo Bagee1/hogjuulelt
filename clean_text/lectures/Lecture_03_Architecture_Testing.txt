@@ -1,0 +1,346 @@
+Dept. of Information and Computer Science
+National University of Mongolia
+School of Information Technology and Electronics
+ICSI486 Software Construction
+Robust Architecture &
+Verification
+NUM Thesis Portal Case Study
+Lecturer
+Batnyam Battulga, Ph.D., Dip.-Ing., Dipl.-Inf.
+Dependency Inversion Ports & Adapters Testing with Mockito Robustness Concurrency
+
+Learning Objectives
+ICSI486 Software Construction
+Apply Dependency Inversion Principle (DIP)
+Structure code to keep domain logic independent and testable.
+Design Ports (Interfaces)
+Define clear boundaries where the application interacts with infrastructure.
+Implement Adapters
+Goal for Today: Create specific implementations for DB, HTTP, and Email services.
+Write Behavior-Focused Unit Tests
+Build services that are stable, testable, and Use Mockito for stubs and verifications to test logic, not implementation.
+resilient to external
+Model Failures & Robustness failures.
+Handle exceptions, timeouts, and retries effectively at boundaries.
+Handle Concurrency
+Detect and fix basic race conditions using atomic types.
+2
+
+Motivation: Why Robust Architecture-
+ICSI486 Software Construction
+External Systems Fail
+Databases, Ministry APIs, and Email gateways are unreliable. Our system must handle outages gracefully.
+Stable Business Logic
+Core domain rules must remain protected from infrastructure changes and updates.
+System Reliability
+Minimizing impact of external failures
+Fast Feedback via Tests
+Decoupled architecture enables fast unit tests (CI), avoiding slow integration tests.
+Test
+Confidence
+Safe Refactoring
+Changes to internal structure should not "break the world" or require rewriting all tests.
+3
+
+Principle Recap (Context)
+ICSI486 Software Construction
+SRP (Single Responsibility Principle)
+A module should have one, and only one, reason to change. Separate concerns to minimize impact of modifications.
+Design Principles
+SRP, OCP, DIP
+Open/Closed Principle
+Software entities should be open for extension but closed for modification. Extend behavior without rewriting core logic.
+Patterns
+Previous Patterns
+Factory, Strategy
+Singleton and Factory patterns utilized to manage object creation and global state (applied carefully).
+Today's Focus
+Robust Architecture
+DIP + Ports & Adapters + Verification: Combining
+Hexagonal + Verification principles to build a robust, testable architecture.
+4
+
+Dependency Inversion Principle (DIP)
+ICSI486 Software Construction
+High-Level Independence
+Policy
+High-level modules (business policy) should never
+(Domain) depend on low-level modules (implementation details like DBs or UI).
+Depends on Interface
+Depend on Abstractions
+Abstraction
+Both high-level and low-level layers must rely on
+(Port) abstractions (interfaces). This creates a stable contract between layers.
+Inverted Control Flow
+Implements Interface
+Abstractions define the needs. Details (Adapters) Detail depend on these abstractions, inverting the (Adapter) traditional source code dependency direction.
+Visualizing the Inversion:
+Dependency points against flow of control
+5
+
+Ports & Adapters (Hexagonal Architecture)
+ICSI486 Software Construction
+Domain at the Center
+The Application Core contains pure business logic and entities, completely isolated from external frameworks or databases.
+Ports are Interfaces
+Web
+Ports are interfaces defined by the application that UI describe how the outside world can interact with it Port REST CLI (Inbound) or how it interacts with others (Outbound).
+API
+DOMAIN
+Adapters Implement Ports
+Adapters are implementation classes that conform to Port
+Port
+Postg interfaces, translating calls between the domain and Tests res infrastructure (e.g., SQL implementation for a Repository).
+Email
+Pluggable Infrastructure
+Infrastructure concerns (DB, UI, Email) become Hexagonal Architecture: Ports decouple Domain from Infrastructure interchangeable plugins. We can swap a real Database for a Mock without changing domain code.
+6
+
+Example Use Case (NUM Thesis Portal)
+ICSI486 Software Construction
+Use Case: Submit Thesis
+Student uploads final PDF and metadata. This triggers the core workflow we are designing.
+Student Submits
+Validate Student Eligibility
+System checks if the student is accredited (tuition paid, courses passed) via external service. Validate (Logic) Persist Submission Persist Data If valid, the thesis is stored in the database and the file system (Repository).
+Notify Supervisor
+Notify Supervisor
+The assigned professor receives an immediate notification (email/dashboard) regarding the new submission.
+7
+
+Define the Ports (Interfaces)
+ICSI486 Software Construction
+AccreditationService
+External eligibility check used to verify if a student meets academic requirements before submission.
+StudentRepository /
+ThesisRepository
+Interface
+Persistence ports handling data storage Definition operations. Abstracting the database (SQL/NoSQL) from core logic.
+Contract
+NotificationService
+Establishment
+Output port for side effects such as sending emails, SMS, or chat messages to supervisors.
+8
+
+Service Depends on Ports (DIP in Code)
+ICSI486 Software Construction
+ThesisSubmissionService receives ports via constructor
+Dependencies are injected rather than instantiated, allowing for flexible configuration and testing.
+Dependency Injection
+No DB/HTTP calls inside the service
+Inverting Control for Flexibility
+The service remains agnostic to infrastructure details, focusing solely on domain logic.
+Pure business rules + orchestration Business Logic
+Layer
+The service coordinates the workflow using abstract interfaces, ensuring clean separation of concerns.
+9
+
+Verification Strategy
+ICSI486 Software Construction
+Verify Behavior, Not Implementation
+Tests should focus on "what" the system does, not
+"how" it does it. This makes refactoring safer and tests less brittle.
+Test Public API
+Interact with the service through its public methods
+Behavior only. Avoid testing private helper methods or internal state directly. Verification Input / Output Key Verification Goals Side Effects Ensure robust correctness by verifying:
+Internal State
+Correct calls to external ports (interactions)
+Correct handling of failure scenarios
+Absence of unwanted side effects
+10
+
+FIRST Principles for Unit Tests
+ICSI486 Software Construction
+Fast
+Tests must run in milliseconds so developers execute them frequently without context switching.
+Clean Code
+Independent
+No shared state or order dependency. Each test must be able
+High Quality Tests to run in isolation and in any sequence.
+Repeatable Robust Architecture
+Deterministic results in any environment (dev, CI, QA). Eliminate
+"flaky" tests. Reliable Deployment
+Self-Validating
+Boolean output (Pass/Fail). No manual inspection of log files or console output required.
+Ensures Confidence
+Timely
+Written just before (TDD) or alongside production code, not months later as an afterthought.
+11
+
+AAA Pattern (Arrange–Act–Assert)
+ICSI486 Software Construction
+Arrange
+Setup inputs, create mocks/stubs, and initialize the unit under test. Prepare everything needed before execution.
+ARRANGE
+Prepare Context & Stubs
+Act
+Execute the single behavior or method being tested.
+Keep this section short and focused on the trigger.
+ACT
+Invoke Method
+Assert
+Verify outcomes: check return values, examine state changes, or verify interactions with dependencies.
+ASSERT
+Single Behavior Focus
+Verify Result & State
+Test one concept per test method. This ensures readability and stability, making failures easier to diagnose.
+12
+
+Mockito: Stubbing vs Verification
+ICSI486 Software Construction
+Stubbing (Arrange)
+Define how dependencies behave before the test acts.
+Use to simulate database results or API responses.
+Test Flow when(...).then Return(...)
+Verification (Assert) Stubbing
+1
+Confirm interactions happened as expected after the "If repo is asked for student X, return Eligible" action. Use to ensure side effects like sending emails occurred. verify(...) Execution (Act) Avoid Overspecification 2 Call service.submitThesis(...) Don't verify every single internal call. Rigid tests break easily when internal implementation details change during refactoring.
+Verification
+3
+Focus on Boundaries "Did we call notifySupervisor(...)-"
+Only stub and verify at the architectural boundaries
+(Ports). Verify the outcome (state change) or the significant side effect (message sent).
+13
+
+CODE — Ports (Interfaces)
+ICSI486 Software Construction
+14
+
+CODE — Application Service (depends on ports)
+ICSI486 Software Construction
+15
+
+CODE — Unit Test (AAA) Happy Path
+ICSI486 Software Construction
+16
+
+CODE — Unit Test (AAA) Failure Path
+ICSI486 Software Construction
+17
+
+BDD Style (Given–When–Then)
+ICSI486 Software Construction
+Narrative Structure
+Uses the same test logic as AAA but wraps it in narrative naming. Tests tell a story about GIVEN behavior rather than just implementation. Preconditions & Context e.g., "Student is eligible" Semantic Syntax Replaces when(...) with given(...) and verify(...) with then(...).should(...) to map directly to WHEN requirements.
+Action or Event
+Living Documentation e.g., "Submit thesis"
+Tests become readable specifications. Ideally, a product owner or non-technical stakeholder can THEN understand the intent.
+Expected Outcome
+FIRST Principles e.g., "Thesis saved & Supervisor notified"
+Despite the different style, BDD tests must still be Fast, Independent, Repeatable, Self- validating, and Timely.
+18
+
+CODE — Happy Path (BDD)
+ICSI486 Software Construction
+19
+
+CODE — Failure Path (BDD)
+ICSI486 Software Construction
+20
+
+AAA vs BDD (Same Structure, Different Story)
+ICSI486 Software Construction
+AAA Pattern BDD Style
+1. Arrange 1. Given
+Setup inputs, mocks, and stubs. Describe the initial context/state.
+2. Act 2. When
+VS
+Execute the specific behavior/method. Describe the action being performed.
+3. Assert 3. Then
+Verify outcomes (state or interactions). Describe the expected outcome/behavior.
+Shared Goal: FIRST Principles
+Both styles aim for tests that are Fast, Independent, Repeatable, Self-validating, and Timely.
+21
+
+Modeling Failures at Boundaries
+ICSI486 Software Construction
+Fail Fast with Explicit Exceptions
+Use specific exceptions to signal failure immediately.
+Avoid silent failures or returning null, which can lead to invalid system states. HTTP 503 Service Unavailable Externalize Timeouts & Retries Raw Infrastructure Error Keep retry mechanisms and timeout configurations in the infrastructure adapters, preserving the purity of domain logic.
+Policy vs. Mechanism
+Eligibility Check
+The Domain defines the "Policy" (what happens on
+Failed failure), while Adapters implement the "Mechanism"
+(how to connect or retry). Clean Domain Exception
+Translate Infrastructure Errors
+Convert low-level errors (SQL exceptions, HTTP 503) into meaningful domain exceptions (e.g., ThesisSubmissionFailedException).
+22
+
+Retry Concept (Adapter-Level)
+ICSI486 Software Construction
+Target Transient Failures Only
+Retry only when errors are temporary (e.g., network timeouts, 503 unavailable). Do not retry permanent Exponential Backoff Strategy logic errors (400 Bad Request).
+Attempt 1 (Failed)
+Bounded Retries + Backoff 1
+Connection timeout
+Use exponential backoff (wait 1s, 2s, 4s...) and a strict maximum attempt limit to avoid the Wait 100ms...
+"Thundering Herd" problem.
+Attempt 2 (Failed)
+2
+Ensure Idempotency
+503 Service Unavailable
+Operations must be safe to repeat. Retrying a non- idempotent "charge payment" call could result in Wait 200ms (Exponential)...
+double billing.
+Attempt 3 (Success)
+Policy in Adapter, Not Domain
+200 OK - Data Persisted
+Keep retry mechanisms inside the Adapter implementation. The Domain logic should remain pure and unaware of infrastructure instability.
+23
+
+Concurrency: The Classic Race Condition
+ICSI486 Software Construction
+Unsafe Read-Modify-Write
+Operations like count++ are not atomic. Threads can read stale values before writing back.
+1 2
+Common Symptoms
+Incorrect counters, lost updates, and intermittent failures that are hard to reproduce.
+Thread A Thread B
+The Fix: Synchronization
+Use atomic types (e.g., AtomicInteger) or locks to ensure mutual Shared Counter exclusion.
+Race Condition
+Concurrent Access Error
+Choose Simplicity
+Prefer the simplest correct mechanism. Don't use complex locks if an atomic type suffices.
+24
+
+CODE — Atomic Fix Example
+ICSI486 Software Construction
+25
+
+Key Takeaways
+ICSI486 Software Construction
+Architecture Enables Testing Verification Focus
+DIP and Ports & Adapters keep the core Use Mockito to verify behavior at domain stable and testable by isolating boundaries, not implementation details.
+infrastructure details. Test interactions and outcomes.
+Quality Standards Robustness & Safety
+Apply FIRST principles and structure Explicitly test failure paths (exceptions, tests with AAA or BDD patterns for timeouts) and ensure no side effects readability and reliability. occur during errors.
+Concurrency Awareness
+Recognize race conditions in shared state and use atomic types or synchronization mechanisms where needed.
+26
+
+Lab Assignment
+ICSI486 Software Construction
+Refactor Architecture
+Refactor a tightly coupled service into a modular Ports & Adaptersdesign to separate domain logic from infrastructure.
+Implement Unit Tests 1 Decouple Service
+Write one happy-pathunit test and one failure-pathunit test (verifying no unwanted side effects occur).
+2 Define Interfaces
+Add BDD Variant
+Create a BDD-stylevariant (Given-When-Then) of one of your tests to improve readability and documentation.
+3 Verify Behavior
+Optional: Retry Logic
+Implement a simple retry mechanism in an adapter and verify it with a dedicated unit test.
+27
+
+References & Further Reading
+ICSI486 Software Construction
+Clean Architecture & Hexagonal Mockito Documentation
+Foundational concepts for decoupling domain logic from infrastructure Official reference for stubbing method calls and verifying interactions in details to ensure maintainability. isolated unit tests.
+Concept Library Documentation
+JUnit 5 User Guide Java Concurrency Basics
+Comprehensive guide for writing, organizing, and running repeatable Technical specification for Atomic* classes, synchronizedblocks, and developer tests in Java. thread safety mechanisms.
+Tooling Language Spec
+CI Best Practices
+Guidelines for integrating fast unit tests into Continuous Integration pipelines to enable rapid feedback loops.
+Methodology
+28

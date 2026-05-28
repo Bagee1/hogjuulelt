@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="mn" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Өрөө захиалгын нэгдсэн систем</title>
+    <link rel="stylesheet" th:href="@{/styles.css}">
+</head>
+<body>
+<header class="topbar">
+    <div>
+        <p class="eyebrow">Их сургуулийн өрөө захиалга</p>
+        <h1>Өрөө захиалгын нэгдсэн систем</h1>
+    </div>
+    <nav>
+        <a href="#booking">Захиалга</a>
+        <a href="#requests">Хүсэлтүүд</a>
+        <a href="#rooms">Өрөөнүүд</a>
+        <a href="#notifications">Мэдэгдэл</a>
+    </nav>
+</header>
+
+<main>
+    <section class="metrics" aria-label="Товч үзүүлэлт">
+        <article>
+            <span th:text="${rooms.size()}">0</span>
+            <p>Өрөө</p>
+        </article>
+        <article>
+            <span th:text="${students.size()}">0</span>
+            <p>Хэрэглэгч</p>
+        </article>
+        <article>
+            <span th:text="${pendingCount}">0</span>
+            <p>Хүлээгдэж буй</p>
+        </article>
+        <article>
+            <span th:text="${approvedCount}">0</span>
+            <p>Батлагдсан</p>
+        </article>
+    </section>
+
+    <div class="alert success" th:if="${success}" th:text="${success}"></div>
+    <div class="alert error" th:if="${error}" th:text="${error}"></div>
+
+    <section class="layout">
+        <div class="panel" id="booking">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Student</p>
+                    <h2>Өрөө захиалах</h2>
+                </div>
+            </div>
+
+            <form class="booking-form" th:action="@{/bookings}" method="post">
+                <label>
+                    Оюутан
+                    <select name="studentId" required>
+                        <option th:each="student : ${students}"
+                                th:if="${student.role() == 'STUDENT'}"
+                                th:value="${student.id()}"
+                                th:text="${student.firstName() + ' ' + student.lastName() + ' (' + student.matriculationNumber() + ')'}">
+                            Student
+                        </option>
+                    </select>
+                </label>
+
+                <label>
+                    Өрөө
+                    <select name="roomId" required>
+                        <option th:each="room : ${rooms}"
+                                th:value="${room.id()}"
+                                th:text="${room.name() + ' - ' + room.capacity() + ' суудал'}">
+                            Room
+                        </option>
+                    </select>
+                </label>
+
+                <label>
+                    Огноо
+                    <input type="date" name="bookingDate" th:value="${defaultDate}" required>
+                </label>
+
+                <div class="time-grid">
+                    <label>
+                        Эхлэх
+                        <input type="time" name="startTime" th:value="${defaultStart}" required>
+                    </label>
+                    <label>
+                        Дуусах
+                        <input type="time" name="endTime" th:value="${defaultEnd}" required>
+                    </label>
+                </div>
+
+                <label class="wide">
+                    Зорилго
+                    <input type="text" name="purpose" placeholder="Жишээ: Семинар, лаборатори, багийн уулзалт" required>
+                </label>
+
+                <button type="submit">Хүсэлт илгээх</button>
+            </form>
+        </div>
+
+        <div class="panel" id="rooms">
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">Admin</p>
+                    <h2>Өрөө нэмэх</h2>
+                </div>
+            </div>
+
+            <form class="room-form" th:action="@{/rooms}" method="post">
+                <label>
+                    Өрөөний нэр
+                    <input type="text" name="name" placeholder="D-204 Project Room" required>
+                </label>
+                <label>
+                    Суудал
+                    <input type="number" name="capacity" min="1" value="20" required>
+                </label>
+                <label>
+                    Байршил
+                    <input type="text" name="location" placeholder="Main building, 2nd floor" required>
+                </label>
+                <button type="submit">Өрөө нэмэх</button>
+            </form>
+
+            <div class="room-list">
+                <article th:each="room : ${rooms}">
+                    <strong th:text="${room.name()}">A-101</strong>
+                    <span th:text="${room.location()}">Main</span>
+                    <small th:text="${room.capacity() + ' суудал'}">30 суудал</small>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel table-panel" id="requests">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Admin dashboard</p>
+                <h2>Ирсэн хүсэлтүүд</h2>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Оюутан</th>
+                    <th>Өрөө</th>
+                    <th>Огноо</th>
+                    <th>Цаг</th>
+                    <th>Зорилго</th>
+                    <th>Төлөв</th>
+                    <th>Үйлдэл</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${bookings.isEmpty()}">
+                    <td colspan="8" class="empty">Одоогоор хүсэлт алга.</td>
+                </tr>
+                <tr th:each="booking : ${bookings}">
+                    <td th:text="${booking.id()}">1</td>
+                    <td th:text="${studentNames.get(booking.studentId()) ?: ('#' + booking.studentId())}">Student</td>
+                    <td th:text="${roomNames.get(booking.roomId()) ?: ('#' + booking.roomId())}">Room</td>
+                    <td th:text="${booking.bookingDate()}">2026-06-01</td>
+                    <td th:text="${#strings.substring(booking.startTime().toString(), 0, 5) + ' - ' + #strings.substring(booking.endTime().toString(), 0, 5)}">09:00 - 10:00</td>
+                    <td th:text="${booking.purpose()}">Purpose</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${booking.status().name().toLowerCase()}"
+                              th:text="${booking.status()}">
+                            PENDING
+                        </span>
+                        <small class="reason" th:if="${booking.rejectReason()}" th:text="${booking.rejectReason()}"></small>
+                    </td>
+                    <td class="actions">
+                        <form th:if="${booking.status().name() == 'PENDING'}"
+                              th:action="@{'/bookings/' + ${booking.id()} + '/approve'}"
+                              method="post">
+                            <button type="submit">Батлах</button>
+                        </form>
+                        <form th:if="${booking.status().name() == 'PENDING'}"
+                              class="reject-form"
+                              th:action="@{'/bookings/' + ${booking.id()} + '/reject'}"
+                              method="post">
+                            <input type="text" name="rejectReason" placeholder="Шалтгаан" required>
+                            <button type="submit">Татгалзах</button>
+                        </form>
+                        <form th:if="${booking.status().name() != 'CANCELLED'}"
+                              th:action="@{'/bookings/' + ${booking.id()} + '/cancel'}"
+                              method="post">
+                            <button type="submit">Цуцлах</button>
+                        </form>
+                        <form th:action="@{'/bookings/' + ${booking.id()} + '/delete'}" method="post">
+                            <button type="submit" class="danger">Устгах</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel" id="notifications">
+        <div class="panel-head">
+            <div>
+                <p class="eyebrow">Notification service</p>
+                <h2>Мэдэгдлийн бүртгэл</h2>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <article th:if="${notifications.isEmpty()}" class="empty">Одоогоор мэдэгдэл алга.</article>
+            <article th:each="notification : ${notifications}">
+                <strong th:text="${notification.eventType()}">BOOKING_CREATED</strong>
+                <p th:text="${notification.message()}">Message</p>
+                <span th:text="${'Booking #' + notification.bookingId() + ' · Student #' + notification.studentId()}">meta</span>
+            </article>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS rooms (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    capacity INTEGER NOT NULL CHECK (capacity > 0),
+    location VARCHAR(160) NOT NULL
+);

@@ -1,0 +1,62 @@
+Sprint 14 Backlog: Splitting the Monolith &
+Docker Compose
+Epic: As a Platform Architect, I want to split the LibraryWeb Monolith into independent Microservices and manage them via Docker Compose, so that the team can scale and deploy the UI independently from the Core APIs.
+User Stories & Acceptance Criteria
+User Story 1: Extract the Book Service
+As a backend developer, I need to create an isolated Book API service.
+• [ ] Create a new project/folder named book-service.
+• [ ] Migrate only the Book domain logic, Book Repository, and BookApiServlet to this
+project.
+• [ ] Create a Dockerfile for the book-service.
+• [ ] The service must run on port 8080 internally and return JSON data on GET
+/api/books.
+User Story 2: Extract the Frontend UI
+As a frontend developer, I need a lightweight service that only serves the JSP/HTML and consumes the external APIs.
+• [ ] Create a new project/folder named frontend-service.
+• [ ] Migrate the JSP files and UI Servlets.
+• [ ] Crucial Change: The UI Servlets must no longer call the internal Core
+LibraryUseCase. Instead, they must make HTTP Requests (e.g., using java.net.HttpURLConnection or HttpClient) to http://book- service:8080/api/books to fetch data and pass it to the JSPs.
+• [ ] Create a Dockerfile for the frontend-service.
+User Story 3: Orchestrate with Docker Compose
+As a DevOps engineer, I want to start the whole system with a single command.
+• [ ] Create a docker-compose.yml file in the root parent directory.
+• [ ] Define two services: book-service and frontend-service.
+• [ ] Use the build: ./book-service directive so Compose builds the images automatically.
+
+• [ ] Map the host port 8080 to the frontend-service container port 8080. (Do NOT expose the book-service port to the host machine directly, it should only be accessible internally by the frontend).
+User Story 4: Add a PostgreSQL Database (Bonus)
+As a DBA, I want a robust database running alongside our application.
+• [ ] Add a db service using the postgres:15-alpine image.
+• [ ] Configure POSTGRES_USER and POSTGRES_PASSWORD using environment variables.
+• [ ] Add depends_on: - db to your book-service.
+• [ ] Update the JDBC connection string in the book-service to connect to jdbc:postgresql://db:5432/postgres.
+Starter Code Snippets
+1. Example docker-compose.yml
+YAML version: '3.8'
+services:
+# 1. The Book API (Backend)
+book-service:
+build: ./book-service
+# Notice: No 'ports' mapped to the host! It's perfectly hidden inside the docker network.
+environment:
+- DB_URL=jdbc:h2:mem:booksDb # 2. The Web UI (Frontend)
+frontend-service:
+build: ./frontend-service
+ports:
+- "8080:8080" # Exposed to your laptop browser!
+depends_on:
+- book-service # Starts after the backend
+environment:
+# Tell the frontend where the backend is located on the internal Docker network
+- BOOK_API_URL=http://book-service:8080/api/books
+2. Frontend Java Code: Calling the API (Java 11+ HttpClient) (This replaces the direct bookRepository.findAll() call in your UI Servlet) Java import java.net.http.HttpClient; import java.net.http.HttpRequest; import java.net.net.URI; import java.net.http.HttpResponse;
+
+// Inside your Frontend Servlet doGet():
+String apiUrl = System.getenv("BOOK_API_URL"); // Gets "http://book- service:8080/api/books" HttpClient client = HttpClient.newHttpClient(); HttpRequest request = HttpRequest.newBuilder() .uri(URI.create(apiUrl)) .GET() .build(); HttpResponse<String> apiResponse = client.send(request, HttpResponse.BodyHandlers.ofString()); // apiResponse.body() now contains the JSON String from the Book Service!
+// Pass this JSON (or map it back to a DTO) to your JSP.
+Definition of Done (DoD)
+Demonstrate the following to the Agile Coach:
+1. Run docker-compose up -d --build in your terminal.
+2. Open localhost:8080 in your browser. Verify the Frontend UI loads.
+3. Show that the UI successfully displays the list of books (proving that the Frontend Container successfully communicated with the Book Service Container via the internal Docker network).
+4. Run docker-compose down and show that the application is completely shut down.

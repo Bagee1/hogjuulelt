@@ -1,0 +1,40 @@
+Lab 11 Sprint 11 Backlog: RESTful API
+Implementation
+Epic: As a mobile app developer, I need a RESTful JSON API so that I can interact with the core domain logic (fetching and creating books) without relying on HTML views.
+User Stories & Acceptance Criteria
+User Story 1: Project Setup & JSON Library
+As a developer, I want to configure the Jackson library so that I can easily serialize/deserialize JSON data.
+• [ ] Add the com.fasterxml.jackson.core:jackson-databind dependency to the pom.xml.
+• [ ] Create a new package adapter.primary.api for the REST controllers.
+• [ ] Install "Postman" (or an equivalent API client) on your local machine.
+User Story 2: Read All Books (GET)
+As a mobile client, I want to retrieve a list of all books in JSON format.
+• [ ] Create a BookApiServlet mapped to /api/books/*.
+• [ ] Override the doGet method.
+• [ ] Set the response content type to application/json and character encoding to UTF-8.
+• [ ] Fetch the List<Book> from the Core Repository.
+• [ ] Use ObjectMapper.writeValueAsString() to convert the list to JSON and write it to the response.
+User Story 3: Create a Book (POST)
+As a mobile client, I want to send a JSON payload to create a new book in the system.
+• [ ] Override the doPost method in the BookApiServlet.
+• [ ] Read the incoming JSON from the HttpServletRequest input stream.
+• [ ] Use ObjectMapper.readValue() to convert the JSON into a Book domain object.
+• [ ] Save the book via the Core Repository.
+• [ ] Return an HTTP Status Code 201 (Created).
+User Story 4: Proper Error Handling (Status Codes)
+As a mobile client, I want to receive proper HTTP status codes if something goes wrong, instead of Tomcat HTML error pages.
+
+• [ ] If a GET request asks for a specific ID (e.g., /api/books/99) that does not exist, return a 404 Not Found status code.
+• [ ] If the incoming JSON for a POST request is malformed, catch the exception and return a 400 Bad Request status code.
+Starter Code Snippets
+1. BookApiServlet.java (The REST Primary Adapter)
+Java package adapter.primary.api; import com.fasterxml.jackson.databind.ObjectMapper; // ... other imports (HttpServlet, Core classes, etc.) @WebServlet("/api/books/*") public class BookApiServlet extends HttpServlet { private BookRepository bookRepository; // From your Core private ObjectMapper objectMapper; @Override public void init() throws ServletException { // Initialize your repository (via Factory or DI) this.bookRepository = RepositoryFactory.getBookRepository(); // Initialize the Jackson JSON mapper this.objectMapper = new ObjectMapper(); } // --- READ (GET) --- @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // Always set the correct headers for REST APIs! response.setContentType("application/json"); response.setCharacterEncoding("UTF-8"); String pathInfo = request.getPathInfo(); try { if (pathInfo == null || pathInfo.equals("/")) { // Return all books: GET /api/books List<Book> books = bookRepository.findAll(); String jsonResponse = objectMapper.writeValueAsString(books); response.getWriter().write(jsonResponse); response.setStatus(HttpServletResponse.SC_OK); // 200 } else { // Return specific book: GET /api/books/{id} String idStr = pathInfo.substring(1); // Remove leading slash int id = Integer.parseInt(idStr); Book book = bookRepository.findById(id);
+
+if (book != null) {
+String jsonResponse = objectMapper.writeValueAsString(book); response.getWriter().write(jsonResponse); response.setStatus(HttpServletResponse.SC_OK); // 200 } else { response.setStatus(HttpServletResponse.SC_NOT_FOUND); // 404 } } } catch (Exception e) { response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR); // 500 } } // --- CREATE (POST) --- @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { response.setContentType("application/json"); response.setCharacterEncoding("UTF-8"); try { // 1. Read the JSON body from the request and map it to the Book class Book newBook = objectMapper.readValue(request.getInputStream(), Book.class); // 2. Execute Core Logic bookRepository.save(newBook); // 3. Return Success Status (201 Created) response.setStatus(HttpServletResponse.SC_CREATED); // Optional: Return the created object back to the client response.getWriter().write(objectMapper.writeValueAsString(newBook)); } catch (Exception e) { // If Jackson fails to parse the JSON, it's a Bad Request from the client response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400 } } }
+
+Definition of Done (DoD): API Integration Test
+Demonstrate the functionality to your Agile Coach using Postman (or cURL):
+1. The GET Test: Execute a GET request to http://localhost:8080/yourapp/api/books. Prove that the response body contains a properly formatted JSON Array [...].
+2. The POST Test: Execute a POST request. In Postman, select "Body", then "raw", then "JSON". Send a valid JSON object representing a new book. Show the Coach that you receive a 201 Created status code.
+3. The 404 Test: Execute a GET request for a book ID that you know does not exist in the database (e.g., /api/books/9999). Prove that the HTTP status code is 404 Not Found.

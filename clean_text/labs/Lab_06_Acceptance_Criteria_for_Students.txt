@@ -1,0 +1,17 @@
+Checklist: Acceptance Criteria for Sprint
+06 (Swing GUI Basics)
+User Story 1: Architecture-Compliant Wiring
+As a developer, I want to cleanly connect the GUI to the system core without violating the principles of the Hexagonal Architecture.
+• [ ] In Main.java, the ThesisService (or Repository) is loaded exclusively via the RepositoryFactory (or ServiceFactory).
+• [ ] There is not a single new JdbcThesisRepository() or similar instantiation inside the UI classes (MainFrame, ThesisTableModel).
+• [ ] The service is passed into the MainFrame via constructor injection (Dependency Injection).
+User Story 2: The TableModel Adapter (Read)
+As a user, I want to see all existing database entries clearly displayed in a table.
+• [ ] The ThesisTableModel class correctly extends AbstractTableModel.
+• [ ] The getValueAt method uses Java Record Syntax (e.g., thesis.title() and thesis.score()) to access the data, not outdated getter methods.
+• [ ] Upon starting the application, the JTable immediately displays all records already present in the H2 database.
+User Story 3: The Create Form (Create)
+As a user, I want to create new theses via input fields and save them to the database.
+• [ ] The form contains text fields for "Title" and "Score", as well as a "Save" button.
+• [ ] The button's ActionListener reads the values, safely converts the score to a Double, and calls the save method of the service.
+• [ ] After successful saving, the text fields are cleared, and the table updates immediately (via fireTableDataChanged() or reloading the list).

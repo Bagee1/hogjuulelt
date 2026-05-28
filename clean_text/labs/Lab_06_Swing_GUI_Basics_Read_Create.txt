@@ -1,0 +1,31 @@
+Lab Assignment Week 6: Swing GUI Basics (Read & Create)
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Context: Over the past weeks, we built a robust Hexagonal Core and connected it to an H2 database. Today, we attach our first Primary Adapter: A Desktop GUI using Java Swing. The UI will remain "dumb" – it contains no business logic and simply communicates with the ThesisService via our Factory.
+User Stories (Sprint 6)
+• US 1 (Wiring): As a developer, I want to retrieve the ThesisService from the
+RepositoryFactory (or ServiceFactory) and pass it to my MainFrame, so the UI can communicate with the Core.
+• US 2 (Table Model): As a user, I want to see all database entries in a JTable. The ThesisTableModel must map the Thesis Java Record components (ID, Title, Score/Student) to the correct table columns.
+• US 3 (Create Action): As a user, I want to type a title and a score into text fields and click "Save" to persist a new thesis in the database and immediately see it in the table.
+Starter-Kit / Code Skeletons
+1. app.Main.java
+Java package app; import adapter.primary.ui.MainFrame; import core.factory.RepositoryFactory; // Or ServiceFactory, depending on your naming import core.service.ThesisService; import javax.swing.SwingUtilities; public class Main { public static void main(String[] args) { // TODO 1: Retrieve the ThesisService via your Factory!
+// ThesisService thesisService = ...
+SwingUtilities.invokeLater(() -> {
+// TODO 2: Pass the service to the MainFrame and set it visible
+// new MainFrame(...).setVisible(true);
+});
+}
+}
+
+2. adapter.primary.ui.ThesisTableModel.java
+Java
+@Override public Object getValueAt(int rowIndex, int columnIndex) {
+Thesis thesis = theses.get(rowIndex);
+// TODO 3: Return the correct Record component based on the column index.
+// NOTE: Use the Java Record syntax (e.g., thesis.title()), NOT getters! switch (columnIndex) { case 0: return null; // Return ID here case 1: return null; // Return Title here case 2: return null; // Return Score / Student Name here default: return null; } }
+3. adapter.primary.ui.MainFrame.java (Save Button Listener)
+Java saveButton.addActionListener(e -> {
+// TODO 4: Read the text from titleField and scoreField (convert score to Double!).
+// TODO 5: Call the createThesis(...) method of your service.
+// TODO 6: Clear the text fields and call loadData() to refresh the table.
+});

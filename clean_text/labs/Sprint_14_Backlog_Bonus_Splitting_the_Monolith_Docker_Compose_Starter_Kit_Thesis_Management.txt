@@ -1,0 +1,49 @@
+Sprint 14 Backlog: Splitting the Monolith
+& Docker Compose
+Sprint Goal: Extract the database from the application's memory/local storage and orchestrate a multi-container environment (App + Database) using Docker Compose.
+User Story
+As a System Architect, I want to separate the PostgreSQL database from the Thesis application container, So that database data persists across application restarts and the architecture scales professionally.
+Task Board (To-Do)
+1. Database Adapter Configuration: Modify the JdbcThesisRepository (or the application properties) to read database credentials (DB_URL, DB_USER, DB_PASSWORD) from environment variables instead of hardcoding them.
+2. Create Docker Compose File: Create a docker-compose.yml file in the root directory.
+3. Define Services: Configure two services: thesis-db (Postgres) and thesis-app (Your custom Dockerfile).
+4. Volume Mapping: Mount a Docker volume for the thesis-db service to ensure Thesis records survive container restarts.
+5. Database Initialization: Map an init.sql script into the Postgres container to automatically create the theses table on the first boot.
+Acceptance Criteria
+• [ ] Running docker-compose up -d successfully starts both the database and the application.
+• [ ] The thesis-app waits for thesis-db to be ready and connects successfully.
+• [ ] Data Persistence: Creating a thesis, stopping the containers (docker-compose down), and restarting them retains the previously created thesis records.
+Starter Code: docker-compose.yml & init.sql
+File: docker-compose.yml
+YAML version: '3.8'
+services:
+thesis-db:
+image: postgres:15-alpine container_name: thesis_postgres
+
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: secretpassword
+POSTGRES_DB: thesis_management
+ports:
+- "5432:5432"
+volumes:
+- pgdata:/var/lib/postgresql/data # Automatically run the init script on the first startup
+- ./init.sql:/docker-entrypoint-initdb.d/init.sql
+thesis-app:
+build: . container_name: thesis_backend
+ports:
+- "8080:8080"
+environment:
+# These environment variables must be read by your
+JdbcThesisRepository!
+DB_URL: jdbc:postgresql://thesis-db:5432/thesis_management
+DB_USER: admin
+DB_PASSWORD: secretpassword
+depends_on:
+- thesis-db
+volumes:
+pgdata: # Persistent storage for PostgreSQL
+File: init.sql (Place in project root)
+SQL
+-- This script runs automatically when the Postgres container is created
+CREATE TABLE IF NOT EXISTS theses ( id SERIAL PRIMARY KEY, title VARCHAR(255) NOT NULL, student_name VARCHAR(100) NOT NULL, status VARCHAR(50) DEFAULT 'PROPOSED' );

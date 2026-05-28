@@ -1,0 +1,52 @@
+Part 1: Mini Crash Course & Eclipse
+Web Setup
+Before we start writing code, we need to understand how the web works and prepare our Eclipse IDE.
+What exactly is...-
+• Apache Tomcat: Your previous programs simply ran from top to bottom (public static void main). On the web, that doesn't work. You need a program that permanently "listens" to see if someone wants to visit a webpage. This program is called Tomcat (a web server or servlet container).
+• Servlet: A standard Java class that decides what happens when someone visits a URL, e.g., http://localhost:8080/theses. The Servlet acts as our Controller. It fetches the data from the database.
+• JSP (JavaServer Pages): A type of HTML file where we can "smuggle in" Java code to build tables dynamically. The JSP is our View (the user interface).
+Step-by-Step: Setting up Tomcat in Eclipse
+Since we are using Eclipse, you have to configure Tomcat as a "Server" within your IDE.
+Step 1: Download Tomcat
+1. Go to the official website: tomcat.apache.org
+2. Download Tomcat 10 (as a .zip file, NOT as an installer).
+3. Extract the .zip file into a folder on your PC (e.g., C:\Tomcat10).
+Step 2: Prepare Eclipse for the Web (Important: You need the "Eclipse IDE for Enterprise Java and Web Developers". If you have the standard version, you must install the "Eclipse Web Developer Tools" via Help -> Eclipse Marketplace!)
+1. Open Eclipse.
+2. Go to the menu: Window -> Preferences (Windows) or Eclipse -> Settings (Mac).
+3. Search on the left for Server -> Runtime Environments.
+4. Click on Add... -> select Apache Tomcat v10.0 -> Click "Next".
+5. For the "Tomcat installation directory", click "Browse" and select the folder where you just extracted Tomcat (e.g., C:\Tomcat10).
+6. Click "Finish" and then "Apply and Close".
+Step 3: Adjust the Maven Project So that Eclipse understands your project is now a web app,
+you must do two things:
+
+1. Open your pom.xml and add the following at the very top (under <version>):
+<packaging>war</packaging> (This tells Maven: Build a Web Archive in the end).
+2. Manually create exactly this folder structure in your project: src/main/webapp/WEB- INF/views/ (Everything inside webapp will later be recognized by the browser.
+Everything inside WEB-INF is protected from hackers).
+Starter-Kit (Code Skeletons for Students)
+1. ThesisServlet.java (Skeleton)
+Java package adapter.primary.web; import core.dto.ThesisDTO; // or core.domain.Thesis import core.factory.RepositoryFactory; import core.service.ThesisService; import jakarta.servlet.ServletException; import jakarta.servlet.annotation.WebServlet; import jakarta.servlet.http.HttpServlet; import jakarta.servlet.http.HttpServletRequest; import jakarta.servlet.http.HttpServletResponse; import java.io.IOException; import java.util.List; // TODO 1: Add the WebServlet annotation for the path "/theses" public class ThesisServlet extends HttpServlet { private ThesisService thesisService; @Override public void init() throws ServletException { // TODO 2: Retrieve the Service via your Factory from Week 4/5!
+// this.thesisService = ...
+}
+@Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // TODO 3: Load the list of all theses using the thesisService // TODO 4: Pack the list into the Request (attribute name e.g., "thesisList") // request.setAttribute("...", ...); // TODO 5: Forward the Request to "/WEB-INF/views/theses.jsp" // request.getRequestDispatcher("...").forward(request, response); } }
+
+2. theses.jsp (Skeleton - Save under src/main/webapp/WEB-INF/views/)
+Java
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ page import="java.util.List" %>
+<%@ page import="core.dto.ThesisDTO" %> <html>
+<head>
+<title>NUM Thesis Web Portal</title>
+</head>
+<body>
+<h2>All Theses</h2>
+<table border="1">
+<tr>
+<th>ID</th>
+<th>Title</th>
+<th>Score / Student</th>
+</tr>
+<%
+// TODO 6: Retrieve the list from the request attribute "thesisList" (Don't forget the Cast!) // TODO 7: Write a for-loop to iterate over the list %> <tr> <td></td> <td></td> <td></td> </tr> <% // TODO 9: Close the for-loop %> </table> </body> </html>

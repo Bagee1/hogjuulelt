@@ -1,0 +1,27 @@
+Starter-Kit / Code-Gerüste
+1. Der UI-Adapter (ThesisTableModel.java) Dieses Gerüst übersetzt unsere Domain-Daten in ein Format, das Swing versteht.
+Java package ui; import javax.swing.table.AbstractTableModel; import java.util.List; import core.dto.ThesisDTO; public class ThesisTableModel extends AbstractTableModel { private final String[] columnNames = {"ID", "Titel", "Student"}; private List<ThesisDTO> theses; public ThesisTableModel(List<ThesisDTO> theses) { this.theses = theses; } // TODO: Aktualisieren Sie die Liste und benachrichtigen Sie die UI public void setTheses(List<ThesisDTO> theses) { this.theses = theses; // HINT: Rufen Sie die Methode auf, die Swing sagt, dass sich Daten geändert haben!
+// fireTableDataChanged();
+}
+@Override public int getRowCount() { return theses.size();
+}
+@Override public int getColumnCount() { return columnNames.length;
+}
+@Override public String getColumnName(int column) { return columnNames[column]; } @Override public Object getValueAt(int rowIndex, int columnIndex) { ThesisDTO thesis = theses.get(rowIndex); // TODO: Mappen Sie die Spalten (0, 1, 2) auf die Attribute des DTOs switch (columnIndex) { case 0: return thesis.getId(); // case 1: return ...
+// case 2: return ... default: return null;
+}
+}
+
+}
+2. Der Main Controller & View (MainFrame.java) Hier wird das Layout (BorderLayout) gebaut und das Observer-Pattern (ActionListener) implementiert.
+Java package ui; import core.service.ThesisService; import javax.swing.*; import java.awt.*; import java.awt.event.ActionEvent; import java.awt.event.ActionListener; public class MainFrame extends JFrame { private ThesisService thesisService; private JTable table; private ThesisTableModel tableModel; private JTextField titleField, studentField; public MainFrame(ThesisService thesisService) { this.thesisService = thesisService; setTitle("NUM Thesis Management"); setSize(800, 600); setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); setLayout(new BorderLayout()); initComponents(); loadData(); } private void initComponents() { // --- CENTER: Tabelle --- // TODO: Initialisieren Sie das tableModel mit einer leeren Liste // TODO: Weisen Sie das tableModel der JTable zu // TODO: Fügen Sie die Tabelle in ein JScrollPane und dann ins CENTER des Layouts ein // --- NORTH: Eingabeformular --- JPanel formPanel = new JPanel(); titleField = new JTextField(15); studentField = new JTextField(15); JButton saveBtn = new JButton("Speichern"); formPanel.add(new JLabel("Titel:")); formPanel.add(titleField); formPanel.add(new JLabel("Student:")); formPanel.add(studentField); formPanel.add(saveBtn); add(formPanel, BorderLayout.NORTH); // --- OBSERVER PATTERN --- saveBtn.addActionListener(new ActionListener() {
+
+@Override public void actionPerformed(ActionEvent e) {
+// TODO: 1. Lesen Sie den Text aus den Fields aus
+// TODO: 2. Rufen Sie thesisService.createThesis(...) auf
+// TODO: 3. Leeren Sie die Textfelder (setText(""))
+// TODO: 4. Rufen Sie loadData() auf, um die Tabelle zu aktualisieren
+}
+});
+} private void loadData() {
+// TODO: Holen Sie alle Thesen vom Service und übergeben Sie diese an das tableModel } }

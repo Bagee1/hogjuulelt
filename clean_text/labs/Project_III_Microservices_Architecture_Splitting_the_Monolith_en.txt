@@ -1,0 +1,84 @@
+Project 3: Microservices Architecture – Splitting the Monolith Module: ICSI486
+Software Construction Project Type: Group Work / Final Project Topic: Deconstructing the monolithicThesis Management System intoa Microservices Architecture.
+Epic / Project Vision
+The existing monolithic Thesis Management System is successful, but it does not scale well for the future. If the notification code fails, the entire system crashes. The Vision: The system will be decomposed into at least three independent microservices. Each service is responsible for its own domain, has its own database (Database-per-Service pattern), and can be deployed independently.
+User Story 1: The Core Thesis Service
+As a faculty administrator, I want to have a dedicated service for managing theses, so that the core logic (title, status "PROPOSED", "ACCEPTED") runs completely independently of user dataor emails.
+Tasks:
+- Create anew SpringBoot / Javaproject forthe . thesis-service
+- Transferthe existingHexagonal Architecture for the entity intothis service. Thesis
+- This service no longer stores student names as plain text, but only a studentId (reference tothe StudentService).
+- Configureits own database (e.g., Postgres DB viaDocker). thesis_db
+- ProvideRESTAPI endpoints: , . POST /theses GET /theses/{id}
+User Story 2: The Student Profile Service
+As the university, I want to centrally manage student data in a dedicated service, so that other systems (like the library or the cafeteria) can also access this data in the future without touching thethesis code.
+Tasks:
+- Create anew project for the . student-service
+- Build the domain (id, firstName, lastName, email, matriculationNumber). Student
+- Configureits own database (e.g., Postgres DB ). student_db
+- ProvideRESTAPI: . GET /students/{id}
+- Integration: Upon creating a thesis, the must check via a synchronous thesis-service HTTP call (REST/OpenFeign) whether the exists inthe . studentId student-service
+
+User Story 3: The Notification Service
+As a student, I want to be notified when my thesis has been submitted or approved, so that I am always informed about thecurrent status.
+Tasks:
+- Create anew project for the . notification-service
+- Thisservice does not havea complex database, butit might store alog ofsent emails.
+- Communication: Implement the communication between the and the thesis-service . notification-service Option A (Synchronous): The sends a REST request to the
+- thesis-service POST . notification-service Option B (Asynchronous / Advanced): Use a message broker (e.g., RabbitMQ or o Kafka). The fires a "ThesisCreatedEvent", and the thesis-service listenstoit (Event-Driven Architecture). notification-service
+User Story 4: DevOps & Orchestration
+As a DevOps Engineer, I want to be able to start all services with a single command, so that newdevelopers canset upthesystem locally inminutes.
+Tasks:
+- Writea separate foreach ofthe three services (Thesis, Student, Notification). Dockerfile
+- Create acentral in theroot directory. docker-compose.yml
+- Orchestrate allservices and theirdatabases in theComposefile.
+- Ensure that the services can communicate with each other over the internal Docker network (e.g., ). http://student-service:8080/students/1 ✅ Definition of Done (Acceptance Criteria for Submission)
+To receive fullpoints for thisproject, thefollowingcriteria mustbe met:
+- []3+ Services: There are at least three runnable, isolated microservices.
+- [ ] Decentralized Data Management: There is no longer a central, monolithic database. Each service has itsown datastorage (Database-per-Service).
+- [ ] Architectural Fidelity: Hexagonal Architecture (Ports & Adapters) continues to be strictlyapplied withineach individual microservice.
+- [ ] Inter-Service Communication: At least one service retrieves data from another service (e.g., Thesis queries Student)ortriggers an action (Thesis triggers Notification).
+- [ ] Docker Compose: A single command ( ) successfully docker-compose up --build spinsuptheentire ecosystem (all services +databases).
+- [ ] Postman Collection: The project includes a Postman collection (or scripts) that curl instructors can useto test theAPIs ofthevarious services.
+
+Starter Code: The Architecture of the docker-compose.yml
+Here is askeleton of what thefinal Docker orchestration should looklikefor thestudents:
+YAML version: '3.8'
+services:
+# 1. Student Service & DB
+student-db:
+image: postgres:15-alpine
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: password
+POSTGRES_DB: student_db
+student-service:
+build: ./student-service
+ports:
+- "8081:8080"
+environment:
+DB_URL: jdbc:postgresql://student-db:5432/student_db
+depends_on:
+- student-db # 2. Thesis Service & DB
+thesis-db:
+image: postgres:15-alpine
+environment:
+POSTGRES_USER: admin
+POSTGRES_PASSWORD: password
+POSTGRES_DB: thesis_db
+thesis-service:
+build: ./thesis-service
+ports:
+- "8082:8080"
+environment:
+DB_URL: jdbc:postgresql://thesis-db:5432/thesis_db
+# URL for Inter-Service Communication
+STUDENT_SERVICE_URL: http://student-service:8080
+NOTIFICATION_SERVICE_URL: http://notification-service:8080
+depends_on:
+- thesis-db
+- student-service # 3. Notification Service
+notification-service:
+build: ./notification-service
+ports:
+- "8083:8080"

@@ -1,0 +1,193 @@
+Student Thesis Management System
+Phase 1 – Assignment Specification (Scrum, Hexagonal Architecture, Swing, JDBC) Course: SWS Lecture & Lab
+Instructor:
+Semester:
+March 1, 2026
+Short description: You will implement a desktop application for managing student theses. The application uses Java Swing as the UI (inbound adapter) and an existing DAO/JDBC persistence layer(outboundadapter), withH2asthedefaultdatabase. InadditiontoCRUD,youwillimplement workflow actions Submit, Approve, Reject. The architecture follows Hexagonal Architecture (Ports & Adapters) and the work is organized using Scrum.
+1. Learning objectives
+After completing Phase 1, you can:
+• structure a Swing/JDBC project using hexagonal architecture (ports/adapters), • apply an MVP/MVC-like separation in Swing (view, presenter, use cases), • enforce workflow rules in the core (not only in the UI), • keep the UI responsive by running DB operations off the EDT (SwingWorker), • integrate existing DAO implementations properly as outbound adapters.
+2. Constraints & prerequisites
+2.1 Provided
+• A DAO already exists. Do not rebuild the DAO.
+• Database: H2 (default). Optional: MySQL via configuration.
+• Technologies: Java (recommended: 17+), Swing, JDBC.
+2.2 Time & process
+• Work is carried out as a Scrum sprint (e.g., one week / until the next lab session).
+• Minimal Scrum events: Planning, short dailies during lab, Review (demo), Retrospective.
+3. Product vision & scope (Phase 1)
+3.1 Goal
+A working desktop app that manages theses, including workflow and persistence.
+3.2 In scope
+• List theses (table) + show details in a form
+• CRUD: Create, Update, Delete
+1
+
+SWS Lecture & Lab Phase 1 Assignment
+• Workflow actions: Submit, Approve, Reject (with reason)
+• Robust error handling (dialog/status display)
+• Responsive UI: DB calls must not run on the EDT
+• Unit tests on use-case/presenter level (at least basic coverage)
+3.3 Out of scope
+• User management/authentication/roles
+• History/audit log, reporting, export (PDF/CSV), advanced search
+• Fully automated UI tests (stretch possible)
+4. Domain model & workflow
+4.1 Entity Thesis
+Required fields (Phase 1):
+• id (unique, managed by DB/DAO)
+• title (must not be empty)
+• studentId (must not be empty)
+• supervisorId (optional in Phase 1)
+• status (see below)
+• rejectReason (only for REJECTED, must not be empty)
+4.2 Status (enum)
+• DRAFT
+• SUBMITTED
+• APPROVED
+• REJECTED
+4.3 Workflow rules (must be enforced in the core)
+• Submit: only from DRAFT to SUBMITTED
+• Approve: only from SUBMITTED to APPROVED
+• Reject: only from SUBMITTED to REJECTED and rejectReason must not be empty
+Note (State Pattern): In Phase 1, the State Pattern is not required. A correct solution using enum ThesisStatus and guarded transitions is fully acceptable. Optional (stretch): Refactor to the State Pattern only if UI and use-case APIs remain stable.
+5. Architecture requirements (Hexagonal Architecture)
+5.1 Strict boundaries
+• The core must not depend on Swing or JDBC/DAO.
+• Swing is an inbound adapter and calls inbound ports (use cases).
+• DAO/JDBC is an outbound adapter and implements outbound ports.
+• No DAO access from UI classes. The UI talks only to use cases/ports.
+5.2 Recommended package structure (example) de.yourorg.thesis core domain
+2
+
+SWS Lecture & Lab Phase 1 Assignment
+Thesis.java
+ThesisStatus.java application ports in
+CreateThesisUseCase.java
+UpdateThesisUseCase.java
+DeleteThesisUseCase.java
+ListThesesUseCase.java
+SubmitThesisUseCase.java
+ApproveThesisUseCase.java
+RejectThesisUseCase.java out
+ThesisRepository.java service
+ThesisWorkflowService.java (or use-case implementations) adapters in swing
+ThesisFrame.java (View)
+ThesisPresenter.java actions (Command/Action classes) out jdbc
+DaoThesisRepository.java (adapter around existing DAO) (existing DAO classes remain here or are referenced here) bootstrap Main.java (composition root) 5.3 Integrating the existing DAO
+Your task is not to build a new DAO, but to:
+• define an outbound port interface in the core (e.g., ThesisRepository), • build an adapter that uses the existing DAO (wrapper/mapper), • keep mapping between DAO records/DTOs and domain objects clean.
+6. UI requirements (Swing)
+6.1 Minimum UI
+• Main window with:
+– Table (list of all theses)
+– Form fields (Title, StudentId, SupervisorId, Status, RejectReason)
+– Buttons: Create, Update, Delete, Refresh, Submit, Approve, Reject
+6.2 Responsiveness
+• DB operations (list, create, update, delete, submit/approve/reject) must not run on the Event Dispatch Thread.
+• Use SwingWorker. Show a loading state (e.g., label/progress).
+6.3 Usability (minimum)
+• Enable/disable workflow buttons depending on the selected status
+3
+
+SWS Lecture & Lab Phase 1 Assignment
+• Nevertheless: rules are validated in the core (UI is not a safety barrier).
+7. Product backlog (user stories & acceptance criteria)
+EPIC A: CRUD & listing
+US-A1: List theses
+As a user, I want to see all theses in a list so that I can manage them.
+AC:
+• Table shows at least: ID, Title, StudentId, SupervisorId, Status
+• Refresh does not block the UI
+• Errors are shown clearly
+US-A2: Create thesis (DRAFT)
+As a user, I want to create a new thesis so that it is recorded in the system.
+AC:
+• Title and StudentId are required
+• Initial status is DRAFT
+• After Create: list is refreshed
+US-A3: Edit thesis
+As a user, I want to edit a thesis so that I can correct data.
+AC:
+• Only possible when a thesis is selected
+• Title must not be empty
+• Persistence via DAO/repository adapter
+US-A4: Delete thesis
+As a user, I want to delete a thesis so that incorrect entries are removed.
+AC:
+• Confirmation dialog before deletion
+• After Delete: list is refreshed and selection is cleared
+EPIC B: Workflow
+US-B1: Submit
+As a user, I want to submit a thesis so that it can be reviewed.
+AC:
+• Only DRAFT can become SUBMITTED
+• Status change is persisted
+• Illegal transitions return a clear error message
+US-B2: Approve
+As a user, I want to approve a submitted thesis so that it becomes final.
+AC:
+• Only SUBMITTED can become APPROVED
+• Status change is persisted
+US-B3: Reject (with reason)
+As a user, I want to reject a submitted thesis and provide a reason to document the decision.
+AC:
+• Only SUBMITTED can become REJECTED
+4
+
+SWS Lecture & Lab Phase 1 Assignment
+• RejectReason is required (not empty)
+• Reason is saved and displayed
+EPIC C: Quality & architecture
+US-C1: UI stays responsive
+AC: DB operations are asynchronous; the UI does not freeze; a loading state is visible.
+US-C2: Clean layering (ports/adapters + MVP)
+AC:
+• No Swing imports in the core
+• No DAO/JDBC calls from view classes
+• At least some unit tests (presenter or use case level)
+Optional (stretch): US-C3 Refactor workflow to State Pattern
+AC: No API changes to use cases or UI; behavior unchanged; tests remain green.
+8. Technical implementation requirements
+8.1 Swing Action (Command idea)
+Recommended: bindbuttonstojavax.swing.Action,e.g.,SubmitAction,ApproveAction,RejectAction.
+The presenter/controller decides whether actions are enabled.
+8.2 Error handling
+• Usecasesthrowdomain-specificexceptions(e.g.,IllegalTransitionException,ValidationException) • The UI shows user-friendly error messages 8.3 Persistence • H2 is initialized via configuration (JDBC URL, user, password) • The DAO adapter encapsulates SQL/JDBC completely
+9. Submission & deliverables
+9.1 Deliverables
+• Source code (Git repository)
+• Short README including:
+– build/run instructions
+– configuration (H2, optional MySQL)
+– architecture overview (ports/adapters, MVP)
+• Sprint artifacts: product backlog (stories), sprint backlog (tasks), brief retrospective notes 9.2 Demo (review)
+In 3–5 minutes, demonstrate:
+• Load list (Refresh)
+• Create + Update + Delete
+• Submit + Approve + Reject with correct rules
+• UI stays responsive (e.g., simulate delay or large list)
+5
+
+SWS Lecture & Lab Phase 1 Assignment
+10. Definition of Done (Phase 1)
+A story is Done when:
+• acceptance criteria are met
+• end-to-end runnable with H2
+• no layer violations (core remains UI/DB-free)
+• at least basic tests exist and are green
+• code is reviewed (briefly) and demo-ready
+11. Grading (suggested rubric)
+Criterion Points Notes
+Functionality (CRUD + listing) 30 End-to-end, correct, sta- ble
+Workflow (Submit/Approve/Reject) 25 Rules enforced in core, persistence correct Architecture (ports/adapters, MVP) 25 No layer leaks, clean sep- aration UI responsiveness (SwingWorker) 10 No freeze, visible loading state Tests & code quality 10 Meaningful unit tests, readability
+12. Checklist (quick self-check)
+Core has no Swing/JDBC/DAO imports
+UI calls only inbound ports/use cases
+DAO is used via a repository adapter
+Workflow rules are validated in the core
+DB operations do not run on the EDT
+Reject requires a reason
+Tests are green
+Optional note: If you finish early, you may refactor the workflow module to the State Pattern as a refactoring exercise. This is not required and will only be evaluated if the core/UI/DB separation is still respected.
+6

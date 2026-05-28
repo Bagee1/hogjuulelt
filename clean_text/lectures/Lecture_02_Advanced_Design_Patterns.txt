@@ -1,0 +1,180 @@
+From C++ to Java Design Patterns
+ICSI486: Software Construction
+Week 02 – Mastering Object Creation
+Deep Dive into Singleton & Factory Methods
+National University of Mongolia Batnyam Battulga, Ph.D., Dipl.-Ing., Dipl.-Inf.
+Department of Information and Computer Science Spring Semester 2026
+
+The Bridge
+From C++ Control to Java Management
+C++ Paradigm Java Paradigm
+Manual Memory Control JVM Managed Memory
+Stack vs. Heap:Explicit choice. Heap Only: Objects live on the heap.
+References are essentially "safe pointers".
+Requires explicit memory management (delete).
+No pointer arithmetic. Safer memory access.
+Direct pointer manipulation allowed.
+The Static Connection
+The Goal
+In both languages, static members belong to the Class itself, not any specific instance. This shared scope is the foundation for the Singleton Pattern.
+
+The Problem
+Naive Singleton & The Race Condition
+UML Sequence Diagram
+Scenario
+Two threads (A & B) access the Singleton getter simultaneously. The :Thread A DbConnSingleton :Thread B lack of atomicity in "Check-Then-Act" leads to failure.
+getInstance()
+1. if (null) →TRUE
+Context Switch (A paused) getInstance()
+2. if (null) →TRUE
+3. new DbConn() return Obj #1
+4. A resumes inside 'if'
+5. new DbConn() return Obj #2
+Race Condition
+Thread B interrupts Thread A after the null-check but before
+Failure: 2 Instances initialization.
+
+The Solution
+Double-Checked Locking (DCL)
+DbConnSingleton 1 Check null (Fast)
+- instance : DbConnSingleton {volatile} Avoids locking overhead if initialized.
+- DbConnSingleton()
++ getInstance() : DbConnSingleton 2 Synchronize
+Enters critical section (only 1 thread).
+DbConnSingleton.java
+3 Double Check
+Essential safety check inside lock.
+volatile
+Prevents reordering & ensures visibility.
+Tip:Use Holder Idiomfor simpler lazy loading.
+
+The "Anti-Pattern"
+When to Avoid Singletons
+Critical Drawbacks The Modern Alternative
+Testing Nightmare Dependency Injection (DI)
+Singletons introduce hidden dependenciesinside methods. Mocking Enterprise Standard (Spring, Guice) `static` methods is difficult (requires Powermock) and leads to brittle tests. Instead of asking for dependencies ("Give me the Logger"), classes declare them ("I need a Logger"). The framework handles the lifecycle (Singleton Scope).
+Global State
+State persists between unit tests. Test A modifies the Singleton, causing Test B to fail mysteriously. Violates test isolation.
+SRP Violation
+The class manages its own lifecycle ANDits business logic. It does too much.
+
+The Problem with "New"
+Tight Coupling & Principle Violations
+SOLID Open-Closed Principle
+"Software entities should be open for extension, but closed for
+CourseEnrollment.java modification."
+Extension Modification
+Why this code fails:
+If we introduce a new requirement tomorrow:
+Need to support ExchangeStudent
+Need to support Instructor
+Result: You must rewrite (modify) the enrollUsermethod every time.
+This class is now married to 'Student' forever.
+The Goal
+Decouple creation from use.
+
+Pattern 2 – Factory Method
+Decoupling via Abstraction
+Roles
+Product Interface
+Creator Factory
+Benefits
+No newin Client
+Centralized logic
+OCP:New types don't break clients.
+
+Factory Implementation
+Programming to an Interface
+UserFactory.java
+1 The Interface
+The client relies only on ThesisUser. It doesn't know (and doesn't care) that the actual object is a Student. This is Loose Coupling.
+2 Centralized Creation
+Complex logic like ID generation, validation, or dependency injection happens here, not in the client code.
+3 Clean Client Code
+The client simply requests a type via create(). No newkeyword in the main application logic.
+Avoid "Stringly-Typed" Code:
+Don't pass strings like "student" to your factory. Use an enum
+UserTypeto catch typos at compile time!
+
+Lab Exercise
+Sprint 1: User Stories & Implementation
+Assignment:Work in pairs. Implement these stories using Test-Driven Development (TDD). Focus on thread safety and decoupling.
+US-101 5 pts US-102 8 pts
+Thread-Safe Logger User Factory
+As aDevOps Engineer, As aProduct Owner,
+I wanta global logging service shared by all threads, I wantto create users based on configuration, So thatI can trace errors across the system without race conditions. So thatwe can add new roles (e.g.Exchange Student) without rewriting client code.
+Acceptance Criteria Acceptance Criteria
+JUnit assertSame()passes for multiple requests. create(type, name)always returns ThesisUserinterface.
+Logs from 100 concurrent threads are preserved (no overwrites). Client code contains ZERO usage of the newkeyword for users.
+Implementation uses DCLor Enumpattern. New types can be added by modifying only the Factory.
+Submission
+Git Repo (clean history) Green JUnit 5 Tests UML Sketch (PDF/PNG) Deadline: Friday 23:59
+Definition of Done
+
+Common Pitfalls
+Singleton & Factory Mistakes to Avoid
+PitfallsComparison.java
+The volatile Trap
+Without volatile, the JVM might reorder instructions. Thread B could see a non-null instthat points to memory not yet fully initialized by the constructor.
+Serialization Breaks Singletons
+Deserializing a Singleton creates a new instance! Fix:Implement readResolve()to return the existing instance.
+Factory: "Stringly-Typed"
+Avoid create("student"). Typos cause runtime crashes. Fix:Use Enums
+(UserType.STUDENT) for compile-time safety.
+Best Practice:
+Use a single-element enum for Singletons if you don't need lazy loading or inheritance. It handles serialization and reflection attacks automatically!
+
+Race Condition Demo
+Singleton Thread-Safety
+LIVE
+Test Harness Setup Java
+Demo Sequence (5-8 Min)
+// 1. Executor Setup
+1
+Setup NaiveSingletonwith artificial delay (10ms) in ExecutorService pool = Executors.newFixedThreadPool(100); constructor. // 2. Concurrent Set to track unique instances Set<Object> instances = ConcurrentHashMap.newKeySet(); 2 Launch 100 Threadsvia ExecutorService calling // 3. Mass Execution getInstance().
+for(int i=0; i<1000; i++) { pool.submit(() -> instances.add(Singleton.getInstance()));
+Observe Multiple Instancescreated (Count > 1). FAIL
+3 }
+FAIL
+4 Apply Fix: Double-Checked Lockingwith volatile.
+5 Re-run: Exactly 1 Instancecreated. PPAASSSS
+Key Discussion
+Atomicity: The "check-then-act" gap is where threads race.
+Visibility:Without volatile, threads might see half- objects.
+Performance:Why we check twice (avoid locking every time). Instructor Note
+Set a breakpoint inside the constructor before the assignment. It makes the race condition easy to visualize.
+
+Real-World Examples
+Patterns in Modern Frameworks
+App Frameworks Infrastructure
+IoC & Lifecycle Management Resource & Logging Management
+Spring Boot (Java) JDBC Connection Pools
+Beans are Singletonsby default (Container-Managed). HikariCP / DataSource:Shared resource management.
+Factory creates connections; Pool (Singleton) manages them.
+Logging (SLF4J/Log4j)
+Android SDK Logger Factories provide effectively singleton instances per class.
+Application Contextacts as a global Singleton.
+Risk: Context leaks causing Memory Leaks.
+Fix: Use DI frameworks like Hilt/Dagger.
+Testing Advice
+Pro Tip
+Don't let Singletons ruin your Unit Tests. Use Dependency Injection to inject Mocks instead of hard-wiring static Singletons. For legacy code, ensure resource reset in @AfterEach.
+
+Summary & Outlook
+Week 02 Recap & Next Steps
+Key Takeaways
+What's Next-
+Lab Session (This Week)
+Respect Thread Safety Implement Thread-Safe Logger & UserFactory.
+Practice TDD.
+When using Singleton for shared resources (DB, Logs), always ensure thread safety using volatile with Double-Checked Locking or the Holder Idiom. Week 03: Inversion of Control Moving from manual Factories to Dependency Injection (Spring Framework).
+Decouple with Factories
+Avoid the newkeyword in business logic. Use Factory Methods to encapsulate creation complexity and support the Open-Closed Principle.
+Reading List
+Effective Java
+Program to Interfaces EJ
+Items 1-5 (Static Factories, Singletons)
+Clients should depend on abstractions (ThesisUser), not concrete
+Design Patterns implementations (Student). This makes your system testable and
+GoF flexible. Chapter: Creational Patterns
+"Object creation is architecture. Good factories and careful singletons save you hours of debugging later."

@@ -1,0 +1,291 @@
+Course
+ICSI486
+Software
+Construction
+Week 13
+Microservices
+& Docker Compose
+Breaking the Monolith
+Instructor
+Batnyam Battulga, Ph.D.
+Spring 2026
+
+Review – Week 12
+Containers vs. Virtual Machines
+Understanding Lightweight vs. Heavyweight virtualization architectures.
+Infrastructure as Code
+Using the Dockerfile to define environment blueprints.
+Build & Run Workflow
+Creating images with docker build and instantiating with docker run.
+Port Mapping
+Using -p 8080:8080 to bridge the isolated container to the host.
+ICSI486 Software Construction 2
+
+Learning Objectives
+The Scaling Problem
+Limitations of the Monolithic architecture.
+Microservices Architecture
+Principles and benefits of decoupling.
+Service Communication
+How independent services talk via REST APIs.
+Docker Compose
+Managing multi-container applications with YAML.
+Networking
+How containers resolve each other's addresses internally.
+ICSI486 Software Construction 3
+
+The Monolithic Architecture
+One Big Artifact
+LibraryWeb.war
+All modules (UI, Books, Users, Auth, DB Connection) are compiled into one single .war file.
+UI Layer
+Unified Deployment Auth
+Deployed as a single atomic unit. You cannot deploy just the
+Books Logic
+UI or just the Backend separately.
+Users Logic
+Inefficient Scaling
+DB Access
+Scaled by duplicating the entire application stack, even if only one module needs more resources.
+ICSI486 Software Construction 4
+
+When the Monolith Fails
+Agility & Deployment Risks
+A minor UI bug fix requires rebuilding and redeploying the entire core application logic.
+Inefficient Scaling
+Heavy load on "Book Search" forces scaling the whole app, wasting RAM on unused UI/User modules.
+Team Friction
+50 developers merging changes into a single Git repository creates conflict and chaos.
+ICSI486 Software Construction 5
+
+Microservices Architecture
+Decomposition:
+Break the application into small, loosely coupled, independently deployable services.
+Business Capabilities:
+Organized around specific business domains rather than technical layers.
+Database per Service:
+Each service manages its own data storage to ensure loose coupling.
+Figure 1: The Microservice approach - Decoupling components for independent scaling
+ICSI486 Software Construction 6
+
+Advantages of Microservices
+Independent Deployments
+Update the UI instantly without touching the Database or Core logic.
+Targeted Scaling
+Run 10 instances of the Book Service, but only 1 instance of the Admin UI.
+Polyglot Programming
+Use the best tool for the job: UI in Node.js, Core in Java, AI-Search in Python.
+ICSI486 Software Construction 7
+
+Trade-offs (The Pain of Distributed Systems)
+Microservices are not a silver bullet!
+Complexity Explosion:
+You replaced simple in-memory method calls with unreliable network calls.
+Latency & Failure:
+Network communication is inherently slower than local execution and will fail unexpectedly.
+Data Consistency Nightmares:
+No foreign keys across different databases. Distributed transactions (Sagas) are hard to implement.
+ICSI486 Software Construction 8
+
+Deconstructing LibraryWeb
+Target Architecture for Sprint 14
+User Service Handles Authentication and User
+Profiles (API).
+Book Service Handles Book CRUD operations (API).
+Frontend UI Lightweight web server rendering HTML, calling the APIs.
+ICSI486 Software Construction 9
+
+How do they talk- REST!
+Synchronous Communication
+Services communicate directly over HTTP where the caller waits for a response.
+The Request Flow
+Frontend needs data and sends a GET /api/books request to the Book Service.
+Service Processing
+The Book Service queries its private database and returns raw JSON data.
+Client-Side Rendering
+The Frontend receives the JSON, parses it, and dynamically builds the HTML.
+ICSI486 Software Construction 10
+
+The Multiple Container Problem user@dev-machine:~/library-project
+$docker run -d –p 8081:8080 –name user-svc user-image
+$docker run -d –p 8082:8080 –name book-svc book-image
+$docker run -d –p 80:8080 –name frontend frontend-image
+Manual Docker is tedious and error-prone!
+Hard to manage, start, stop, and wire networking connections by hand.
+ICSI486 Software Construction 11
+
+Enter Docker Compose
+Multi-Container Orchestration A powerful tool for defining and running multi- container Docker applications seamlessly.
+Single Configuration File Uses a single YAML file (docker-compose.yml) to configure all application services, networks, and volumes.
+One-Command Startup Start your entire application stack, including database and frontend, with one command: docker-compose up.
+ICSI486 Software Construction 12
+
+YAML Syntax Basics
+YAML Ain't Markup Language config.yml
+A human-readable data serialization language. It is cleaner than XML or JSON and is the standard for configuration files.
+server:
+port:8080# Numerical value host:localhost# String value
+Indentation Matters!
+features:
+Y
+YAML relies on indentation to denote structure. Use spaces, -login# List item 1
+NOT tabs. A single tab character can break your entire
+-search# List item 2 configuration.
+ICSI486 Software Construction 13
+
+docker-compose.yml Structure version:
+The Compose file format version (e.g., '3.8').
+services:
+Defines the containers (your apps, databases) and their configurations.
+volumes:
+Defines persistent data storage for data that needs to survive restarts.
+networks:
+Defines isolated communication channels between specific services.
+ICSI486 Software Construction 14
+
+Defining a Service
+The Build Context
+The buildkey tells Compose where to find the Dockerfile. It will automatically build the image from source before running it.
+docker-compose.yml services:
+Port Mapping book-service:# Name of the service
+Maps the Host Port (8082) to the Container Port (8080). This allows build:./book-service-folder you to access different services on different local ports (e.g., ports:
+localhost:8082).
+-"8082:8080"# Host:Container environment:
+-DB_URL=jdbc:h2:mem:books
+Environment Variables
+Injects configuration settings directly into the container at runtime.
+Perfect for database URLs, API keys, or feature flags.
+ICSI486 Software Construction 15
+
+Docker Compose Networking (Magic!)
+Internal DNS Resolution
+Compose automatically creates a virtual network for your services, assigning each container an internal IP.
+Service Discovery by Name
+Containers can talk to each other using their Service Name as the hostname. No IPs needed!
+Example Scenario
+Frontend wants books- It calls:
+http://book-service:8080/api/books
+No Hardcoding Required
+Never hardcode IP addresses again. The internal DNS handles dynamic IP assignment automatically.
+ICSI486 Software Construction 16
+
+Database as a Service docker-compose.yml
+Beyond In-Memory
+We don't need H2 in-memory databases anymore. They are services:
+great for quick tests but lose data on restart. It's time to use a db:
+real, persistent database engine for our microservices.
+image:postgres:15 ports:
+-"5432:5432" environment:
+Instant Postgres
+POSTGRES_USER:admin
+POSTGRES_PASSWORD:secretpassword
+Instead of installing PostgreSQL on your laptop, we simply add volumes:
+a container definition to our Compose file. Docker pulls the official image and runs an enterprise-grade DB in seconds. -pg-data:/var/lib/postgresql/data # We now have a running DB server!
+ICSI486 Software Construction 17
+
+depends_on (Startup Order)
+The Startup Race Condition docker-compose.yml
+By default, Docker Compose starts all services simultaneously.
+services:
+If your app starts faster than the database, the connection fails, and the container crashes.
+book-service:
+image:my-java-app:v1 depends_on:# Critical!
+Enforcing Order -db# Wait for DB container
+D
+The depends_ondirective solves this by telling Compose to start the dependency (database) first and wait for it to be created db:
+before starting the dependent service (app).
+image:postgres:15
+ICSI486 Software Construction 18
+
+Environment Variables & Secrets
+Security First
+.env
+Never hardcode passwords, API keys, or tokens directly in docker- compose.yml. If you commit this file to GitHub, your secrets DB_PASS=supersecret123 public knowledge immediately.
+API_KEY=ab83hs92js02
+The .env Solution docker-compose.yml
+Create a hidden file named .env in your project root. Docker
+Compose automatically looks for this file and loads variables into the build context.
+services:
+db:
+image:postgres:15 environment:
+Git Ignore (Crucial!)
+POSTGRES_PASSWORD:${DB_PASS}
+You MUST add .env to your .gitignorefile. This ensures the template # Variable substitution works for everyone, but the secrets stay on your local machine only.
+ICSI486 Software Construction 19
+
+Useful Compose Commands
+Start all services in background
+$docker-compose up -d
+Creates and starts containers as defined in YAML. "-d" runs in detached mode.
+Stop and remove everything
+$docker-compose down
+Stops containers and removes containers, networks, volumes, and images created by `up`.
+Follow logs of all services
+$docker-compose logs -f
+Aggregates output from all running containers into a single stream.
+List running services
+$docker-compose ps
+Shows the status (Up/Exit), ports, and names of containers in the current project.
+ICSI486 Software Construction 20
+
+Fallacies of Distributed Computing
+False Assumptions Developers Make
+The network is reliable. Latency is zero.
+Packets get lost; connections drop. Calls take time; distance matters.
+Bandwidth is infinite. The network is secure.
+Data limits exist; congestion happens. Assume it is compromised.
+Design your services to handle failures gracefully.
+Implement Retries, Timeouts, and Circuit Breakers.
+ICSI486 Software Construction 21
+
+API Gateways (Brief Outlook)
+Single Entry Point:
+Clients (Mobile, Web) communicate only with the Gateway, not individual services.
+User Service
+/api/users
+Intelligent Routing:
+Mobile App API Gateway
+Routes requests like /api/users to the User
+Client Port 80/443
+Service and /api/books to the Book Service.
+Book Service
+/api/books
+Abstraction & Security:
+Hides internal architecture (IPs/Ports) and centralizes authentication.
+Figure 2: The Gateway acts as a "Hotel Concierge" routing requests
+ICSI486 Software Construction 22
+
+The Polyglot Future
+High-Performance Calculation
+Use Rust or C++ for computationally intensive tasks.
+Rapid API Development
+Use Node.js or Go for lightweight, fast services.
+Enterprise Business Logic
+Use Java or Spring for complex domain models.
+Docker Compose is Agnostic
+It simply runs containers; it doesn't care about the language inside.
+ICSI486 Software Construction 23
+
+Summary
+Scalability Architecture
+Monoliths hinder scaling; Microservices allow targeted scaling but introduce distributed system complexity.
+Communication
+Independent services communicate over the network using standard protocols like REST/JSON.
+Orchestration
+Docker Compose manages multi-container applications seamlessly using a single declarative YAML file.
+Service Discovery
+Internal DNS resolution allows containers to talk to each other by service name, removing the need for IP management.
+ICSI486 Software Construction 24
+
+Q&A & Lab Mission
+SPRINT 14
+Lab Mission
+Deconstruct the LibraryWeb Monolith
+Step 1: Split the monolith into User Service and Book Service.
+Questions-
+Step 2: Create a separate Frontend that consumes the JSON APIs.
+Ask me anything about
+Step 3: Author the docker-compose.yml to orchestrate all
+Docker or Microservices containers.
+Goal: Run the full stack with one command!
+ICSI486 Software Construction 25

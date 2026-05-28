@@ -1,0 +1,339 @@
+ICSI486 Software Construction
+Week 15
+DEPARTMENT OF COMPUTER SCIENCE
+Lecture Topic
+Continuous Integration
+& Continuous Deployment
+Automating the Pipeline with GitLab
+Instructor
+Batnyam Battulga, Ph.D.
+Core Topic
+"Transforming manual deployments into automated, reproducible pipelines."
+
+Review
+Week 13 Achievements .
+Architectural Shift
+Transitioned from a monolithic .war file to a distributed Microservices architecture.
+Separation of Concerns
+Isolated the Frontend UI from the Backend Book API.
+Container Orchestration
+Utilized docker-compose.yml to boot multiple containers simultaneously.
+Internal Networking
+Leveraged Docker's internal DNS so containers can resolve each other by service name (e.g., http://book- service:8080).
+ICSI486 Software Construction Slide 2
+
+Agenda
+What you will master today .
+The Integration Problem
+Understanding why manual testing and merging often leads to broken codebases (the "Integration Hell").
+CI/CD Philosophy
+Defining Continuous Integration, Continuous Delivery, and Continuous Deployment.
+GitLab Architecture
+Understanding the relationship between the GitLab Server and GitLab Runners.
+Pipeline as Code
+Writing a robust .gitlab-ci.yml file to automate Maven builds and JUnit tests.
+Docker Registry
+Automatically building and pushing Docker images to the GitLab Container Registry.
+ICSI486 Software Construction Slide 3
+
+The Old Way
+The Manual Workflow Nightmare
+Why it's broken
+THE CONSEQUENCE
+Integration Hell
+High risk of human error, extremely slow release cycles, and massive team frustration.
+ICSI486 - Software Construction Week 14 - CI/CD
+
+Concept Continuous Integration
+What is Continuous Integration (CI)-
+Key Benefits
+Definition
+Fail Fast
+Detects integration errors instantly. Bugs are caught minutes after
+The practice of merging all developers' working copies creation, not weeks later.
+to a shared mainline several times a day .
+Protected Main Branch
+The Golden Rule Prevents broken code from ever reaching the main branch, ensuring the codebase is always releasable.
+"Every single commit pushed to the repository is immediately verified by an automated build and automated tests." No "It Works on My Machine" Tests run in a clean, neutral environment, eliminating environment - specific bugs and excuses.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Concept Advanced Automation
+What is Continuous Deployment (CD)-
+The Philosophy
+Defining the Finish Line
+Production Ready
+The goal is ensuring your software is always in a deployable state, even if you don't actually deploy every commit.
+Continuous Delivery
+The pipeline builds a release -ready artifact (e.g., Docker
+Image). Deployment to production requires a manual click
+(approval).
+Artifact Driven
+CD relies on generating immutable artifacts (Docker Images) that are tested once and deployed everywhere.
+Continuous Deployment
+Crucial Requirement
+Every change that passes the pipeline is released to customers automatically . NO human intervention .
+"To enable Continuous Deployment, you need an incredibly robust and comprehensive automated testing suite ." ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Week 14
+Introduction to GitLab CI/CD .
+All-in-One Solution
+Combines Source Code Management (Git), Issue Tracking, CI/CD pipelines, and Container Registry all in a single application ecosystem.
+Configuration as Code
+Pipelines are defined strictly in a single YAML file named .gitlab-ci.yml located at the root of your repository.
+Version Controlled
+Since the pipeline config is in the repository, changes to the deployment process are tracked, branched, and reviewed just like Java source code.
+ICSI486 Software Construction Slide 7
+
+Architecture Infrastructure
+GitLab Architecture: Server vs. Runners
+Key Concepts
+Separation of Concerns
+Component Roles
+The GitLab Server does not execute code itself. This prevents heavy build processes (compiling Java, building Docker images) from slowing down the web interface.
+GitLab Server
+The "Brain". Hosts the repository, provides the web interface, manages users, and stores pipeline configurations. It triggers pipelines based on events (like a push).
+Runner Types
+Triggers Job Shared Runners: Provided by GitLab.com (free quota).
+Specific Runners: Hosted on your own university or company servers for security, control, and unlimited performance.
+GitLab Runners
+The "Muscle". Separate worker machines (servers, VMs, or containers) that pull jobs and execute the actual scripts defined in your .gitlab-ci.yml.
+Execution Environment
+Runners typically use the Docker executor , meaning every job runs in a fresh, isolated container environment, ensuring no leftovers from previous builds.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Configuration
+The Anatomy of a Pipeline .
+Understanding the .gitlab-ci.yml structure
+Strict YAML Syntax
+Written in YAML (YAML Ain't Markup Language). Indentation using spaces (not tabs) is strictly enforced to define structure.
+Pipeline Composition
+The top -level structure. Pipelines are composed of distinct stages that organize the workflow logic.
+Stages & Jobs stages act as categories. jobs are the specific tasks assigned to those stages.
+Scripts
+Jobs contain the actual script section —the shell commands (e.g., mvn test) the Runner will execute.
+Execution Flow
+Jobs in the same stage run in parallel . Jobs in subsequent stages run sequentially (wait for previous to finish).
+ICSI486 Software Construction Slide 9
+
+Configuration .gitlab-ci.yml
+Defining Stages
+Establish Chronological Order
+.gitlab-ci.yml
+The stages keyword defines the sequence of execution. It acts as the high - level roadmap for your entire pipeline.
+# Define the stages of the pipeline
+# Order matters here!
+stages:
+Strict Ordering
+-compile# Runs first
+Stages run sequentially. Compile must finish successfully before Test begins. -test# Runs only if compile succeeds -package Fail Fast Behavior -dockerize# Runs last If any job in the compilestage fails, the pipeline stops immediately. Subsequent stages are skipped.
+# Job definitions will follow...
+build-job:
+Visual Representation stage:compile
+GitLab uses this list to render the pipeline graph in the UI, making it easy to track script:
+progress.
+-mvn clean compile
+Execution Flow compile test package dockerize
+YAML indentation must be spaces, not tabs.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Build Phase .gitlab-ci.yml
+Creating the First Job
+Defining a Job for Compilation
+.gitlab-ci.yml
+A job is the fundamental unit of work. Here we define build-java to compile our application using Maven.
+# Define the compilation job build-java:
+# Assign to the 'compile' stage
+Job Name stage:compile build-javais an arbitrary name. You define it. It appears on the GitLab pipeline screen as the job's identifier.
+# Use a specific Docker image image:maven:3.9.4-eclipse-temurin-17
+Stage Association
+The stage: compileline links this job to the "compile" stage we defined in the global stageslist. # Commands to execute script:
+Script Execution
+-echo "Compiling the LibraryWeb application..."
+The scriptsection contains the exact shell commands (like mvn clean compile) the Runner will execute in the terminal.
+-mvn clean compile
+Runner Action
+When this job triggers, the Runner starts a container, clones your code, and runs the commands sequentially.
+The 'image' keyword ensures Maven is installed.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+CI/CD Environment
+Choosing the Right Docker Image .
+The Default Runner State
+By default, a GitLab Runner might be a bare Linux machine without any specific tools installed. It likely lacks Java, Maven, or the specific SDK versions your project requires.
+The Magic of the image Keyword
+Using image: maven:3.9.4-eclipse-temurin-17 tells the Runner to pull and start a specific Docker container. Your job scripts then execute inside this pre -configured container.
+Reproducibility & Hygiene
+Consequence: You don't need to manually install dependencies on the server. The build environment is always perfectly clean, isolated, and 100% reproducible across all runs.
+ICSI486 Software Construction Slide 12
+
+Verification Stage: test
+Executing Automated Tests
+The Safety Net
+.gitlab-ci.yml
+Automated tests are the critical gatekeeper. They ensure that new code doesn't break existing functionality before it ever reaches production. # Define the test job test-java:
+stage:test
+Exit Code Detection
+If a JUnit test assertion fails, Maven returns a non-zero exit code(e.g., exit 1)
+# Use the same image as build to ensure to the operating system.
+consistency
+Pipeline Halt image:maven:3.9.4-eclipse-temurin-17
+The GitLab Runner detects this failure immediately. It marks the job as FAILED and stops the entire pipeline.
+script:
+-echo "Running JUnit Tests..."
+-mvn test
+Failure Handling Logic
+# Optional: Define artifacts for test reports mvn test Executes all JUnit test cases artifacts:
+when:always
+Assert False Exit Code 1 Pipeline Stop reports:
+junit:target/surefire-reports/*.xml
+Assert True Exit Code 0 Proceed
+Tests run in a fresh, isolated container.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Persistence Data Transfer
+Managing Artifacts
+The Stateless Runner Problem
+.gitlab-ci.yml
+By default, GitLab Runners are stateless. Every job starts in a fresh, isolated container . Files created in one job are lost when that job finishes.
+# Job to package the application package-app:
+stage: package
+Isolation & Destruction script:
+When build-javafinishes, the container —and your compiled .warfile—is
+-mvn package destroyed.
+The Artifact Solution # Define what to keep after job ends
+Artifacts allow you to explicitly save files/directories. They are uploaded to GitLab artifacts:
+and passed to subsequent stages.
+paths:
+-target/libraryweb.war
+Data Flow
+# Optional: Clean up storage expire_in:1 hour libraryweb.war libraryweb.war
+Build Job GitLab Server Dockerize Job
+Next job can now access target/libraryweb.war
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Building Images CI/CD Pipeline
+Docker Integration
+Docker -in-Docker (DinD)
+.gitlab-ci.yml
+To build a Docker image inside a CI pipeline, the Runner needs access to a Docker daemon. We achieve this using the "DinD" # Building a Docker Image in CI service approach.
+build-docker-image:
+stage: dockerize
+The Services Keyword
+Use servicesto start a "sidecar" container. This runs a privileged Docker
+# 1. Use the official Docker client image daemon that your build job can talk to.
+image: docker:24.0.5
+Standard Commands
+# 2. Start the Docker daemon service
+Once the service is active, you can run standard commands like docker build inside your script, exactly as you would locally. services:
+- docker:24.0.5-dind script:
+Runtime Architecture
+# Now we can run docker commands!
+- docker build -t my-library-app .
+- docker images
+Your Job Service
+TCP Bridge docker:latest docker:dind
+"DinD" stands for Docker -in-Docker
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Infrastructure
+The GitLab Container Registry .
+A Private Home for Your Images
+GitLab provides a built -in Docker Registry for every project. There is no need to push proprietary code to the public Docker Hub.
+Registry URL Variable
+$CI_REGISTRY automatically points to the correct registry address for your specific GitLab instance.
+Auto -Authentication
+$CI_REGISTRY_USER & $CI_REGISTRY_PASSWORD are auto -generated credentials, valid only for the duration of the job (Zero Trust).
+Namespace & Path
+$CI_PROJECT_PATH defines your specific namespace (e.g., user/libraryweb ) to ensure images are tagged correctly.
+ICSI486 Software Construction Slide 16
+
+Deployment Script Execution
+Pushing to the GitLab Registry
+.gitlab-ci.yml
+Once the Docker daemon is active (via DinD), we execute a script sequence to authenticate, build, and upload the artifact to the private registry. build-docker-image:
+stage:dockerize image:docker:24.0.5
+Step 1: Secure Authentication services:
+We pipe $CI_REGISTRY_PASSWORDinto docker login --password-stdin. -docker:24.0.5-dind
+This prevents the secret from ever appearing in the build logs.
+script:
+Step 2: Dynamic Tagging
+# 1. Login safely using stdin
+Images must be tagged with the full registry path: -echo"$CI_REGISTRY_PASSWORD"| docker login $CI_REGISTRY- registry.gitlab.com/group/project/image:tag. We construct this using u$CI_REGISTRY_USER --password-stdin CI variables.
+# 2. Define the target image name
+Step 3: Push to Registry
+-
+The final docker pushcommand uploads the layers. The image is now
+IMAGE_TAG=$CI_REGISTRY/$CI_PROJECT_PATH/libraryweb:latest available for deployment to any server.
+# 3. Build the image
+Script Execution Flow -docker build –t $IMAGE_TAG.
+# 4. Push to registry
+Auth Build Tag Push
+-docker push $IMAGE_TAG
+Credentials are injected automatically by GitLab.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Security Best Practices
+Protecting Secrets with CI/CD Variables .
+The Golden Rule
+Never commit passwords, SSH keys, or API tokens directly to .gitlab-ci.yml.
+Secure Configuration
+Navigate to Settings → CI/CD → Variables in your GitLab project to add sensitive credentials like PRODUCTION_SSH_KEY.
+Log Protection
+Always check the "Mask variable" option. This ensures secrets are redacted (replaced with [MASKED]) if they accidentally appear in job logs.
+Access in Pipeline
+GitLab injects these secrets as standard environment variables. Access them in your YAML scripts via $PRODUCTION_SSH_KEY.
+ICSI486 Software Construction Slide 18
+
+Optimization rules & conditions
+Controlling Execution
+Conditional Builds
+.gitlab-ci.yml
+Pipelines shouldn't be "all or nothing." Use the rules keyword to intelligently decide when to run heavy tasks.
+# Optimize: Only build on main branch build-docker-image:
+Resource Efficiency stage: dockerize
+Building Docker images is CPU -intensive. Avoid building for minor text changes or feature branches. image: docker:24.0.5 Main Branch Logic # The 'rules' section acts as a filter Restrict "production -ready" tasks (like dockerize) to run only when code merges rules:
+into main.
+- if:$CI_COMMIT_BRANCH == "main"
+Save Runner Minutes
+Prevent improved queues and save costs by skipping unnecessary jobs. script:
+- docker build -t my-app .
+- docker push my-app
+Decision Logic
+Commit Branch == Main- Build Docker
+(If False, job is skipped)
+Pre-defined variables like $CI_COMMIT_BRANCH make logic easy.
+ICSI486 - Software Construction Week 14 - CI/CD & Automation
+
+Troubleshooting
+The Pipeline is RED . Now what-
+1
+Don't Panic
+A failing pipeline is a good thing ! It means the system successfully caught a bug before it reached production. Treat it as a safety net, not a punishment.
+2
+Inspect the Job Logs
+Click on the failed job in the GitLab UI. Read the terminal output carefully. The actual error message (e.g., Compilation Failure or AssertionError) is usually found at the very bottom of the log.
+3
+Fix Locally, Push Again
+Reproduce the issue on your local machine. Fix the underlying Java code or the broken test. Do not try to hack the .gitlab-ci.yml just to force it to pass.
+ICSI486 Software Construction Slide 20
+
+Conclusion
+Week 15 Finale
+Summary & Lab Mission
+Key Takeaways
+Automation is Key Pipeline as Code
+CI/CD eliminates manual errors by automating testing, building, and GitLab CI defines the entire workflow in a single version -controlled deployment steps. .gitlab-ci.ymlfile.
+Isolated Jobs Built -in Registry
+Jobs run in fresh containers. Data persists between stages only via Securely store your built Docker images internally without needing public Artifacts . hubs.
+Assignment
+Lab Mission: "LibraryWeb" Pipeline
+$ git push origin main
+Create a .gitlab-ci.yml file for your project. Your pipeline must successfully execute the
+Enumerating objects: 5, done.
+following sequence:
+Writing objects: 100% (5/5)
+Compile Java source code (Maven) Execute JUnit tests remote: View pipeline:
+https://gitlab.com/...
+Build Docker Image (Docker -in-Docker) Push to GitLab Container Registry
+Pipeline running...
+ICSI486 - Software Construction Instructor: Batnyam Battulga, Ph.D.

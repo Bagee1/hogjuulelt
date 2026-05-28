@@ -1,0 +1,408 @@
+National University of Mongolia 2026-02-28
+Phase 2: Leaving the Console Behind
+ICSI486 Software Construction
+Week 06: Desktop GUI
+& Design Patterns
+Topic: The UI as a Primary Adapter (Java Swing)
+Lecturer
+Batnyam Battulga, Ph.D.
+
+Recap: Where Are We Now-
+Phase 1 Complete
+The Hexagonal Core
+Database
+CORE
+Domain & Logic
+Domain Entities
+Student, Thesis POJOs
+Use Cases
+ThesisService (Business Logic)
+Secondary Adapter
+JdbcThesisRepository & H2 Database
+The Missing Piece
+Quality Assurance
+Automated Unit Tests with Mockito
+A User Interface (Primary Adapter)to trigger our perfectly tested core.
+ICSI486 Software Construction • Week 06
+
+Learning Objectives for Week 6
+ICSI486 / W06
+Understand the UI as an Adapter
+Map the GUI component to the Hexagonal Architecture as a Primary Adapter.
+Identify the "God Class" Anti-Pattern
+Learn why mixing UI presentation logic and database access code is fatal for maintainability.
+Master UI Design Patterns
+Implement the core patterns that drive modern user interfaces.
+MVC Observer Adapter (TableModel)
+Construct a Functional GUI
+Build a complete JFrame application that displays database records in a JTable using Swing.
+ICSI486 Software Construction • Week 06
+
+Why Java Swing in 2026-
+Expectation Management
+Pedagogical Value
+Pedagogical Sandbox
+The Reality
+No HTML/CSS overhead or network latency distractions. We can focus 100% on object-
+Java Swing is considered legacy in oriented architecture and logic flow without "web dev" complexity.
+the modern software industry. You likely won't build new large-scale enterprise applications with it. Pure Patterns Swing forces you to implement Observerand MVC manually. It perfectly isolates these architectural concepts, making them easier to understand before using abstract frameworks.
+The Question
+Modern Foundation
+Why are we learning it-
+The principles learned here apply exactly to modern frameworks. If you understand
+Swing's event loop and state management, you understand React, Angular, and Spring
+Web.
+ICSI486 Software Construction • Week 06
+
+The "God Class" Anti-Pattern
+Do Not Do This
+What happens next-
+The Temptation
+Writing business logic and SQL directly inside a UI event handler.
+Massive File Size
+UI code bloats to thousands of lines ("Spaghetti Code"). You can't find anything anymore.
+LoginButton.java public void actionPerformed(ActionEvent e) {
+// Logic mixed with UI!
+String name = txtName.getText();
+Impossible to Test
+Connection c = Driver.getConn();
+Unit tests can't click buttons. To test logic, you have tomanually run the app
+"INSERT INTO students..." every time.
+stmt.execute();
+JOptionPane.show(...);
+}
+Vendor Lock-in
+Cannot switch to a Web or Mobile UI later because your logic is trapped inside
+Swing buttons.
+Why it's tempting:It seems faster initially. You don't have to create separate classes or interfaces. But it's a trap.
+The Golden Rule
+The UI must be DUMB.
+It only displays data and forwards clicks.
+ICSI486 Software Construction • Week 06
+
+Architecture – The UI as Primary Adapter
+Hexagonal Architecture Recap
+The Role of the GUI
+Primary Adapter
+The Swing GUI is not special. It is just another implementation of a primary adapter, exactly like our console app or a Java Swing GUI future REST API.
+Driven Side (Driving)
+Translates clicks to method CORE calls
+Business Logic
+Translation Layer
+ThesisService Secondary
+1. User clicks "Save"
+Adapter
+2. Adapter captures event
+3. Adapter calls Core:
+JDBC Repository
+Driven Side thesisService.createThesis(...)
+Persists data to H2
+ICSI486 Software Construction • Week 06
+
+The 3 Pillars of GUI Construction
+Software Construction
+Structure Layout Interactivity
+How do we organize our code so business How do we position components so they How does the application respond when the logic doesn't leak into the UI- Separating adapt to different screen sizes and user clicks a button or types text- The core concerns is crucial for maintainability. resolutions without breaking- of event-driven programming.
+MVC Pattern Layout Managers Observer Pattern
+ICSI486 Software Construction • Week 06
+
+Pillar 1 – MVC (Model-View-Controller)
+Separation of Concerns
+Model View Controller
+Represents the pure state and business logic What the user sees and interacts with. It The mediator. It handles user input events, of the application. It knows nothing about the displays data from the Model and sends user updates the Model, and triggers the View to UI. actions to the Controller. refresh.
+Entities, DTOs JFrame, JButton, JTable ActionListener
+Architecture Rule
+The View NEVER talks to the Database directly!
+ICSI486 Software Construction • Week 06
+
+Pillar 2 – Basic Swing Components javax.swing.*
+Containers
+JFrame JPanel
+The top-level window. It holds everything else A generic lightweight container used to group Container and provides the title bar, minimize, and close other components together. Essential for buttons. complex layouts.
+Controls & Data
+Click Me ID Name
+1 Alice
+2 Bob
+JButton
+JTextField JTable
+An implementation of a "push" button. Triggers an ActionEvent when clicked by the user.
+A lightweight component that allows the editing A complex component used to display and edit of a single line of text. regular two-dimensional tables of cells.
+ICSI486 Software Construction • Week 06
+
+The Problem with Absolute Positioning
+Fragile Design
+Why does it fail-
+The Method
+Defining exact pixel coordinates and dimensions for every single
+Screen Resolutions component.
+A 100px wide button looks fine on 1080p, butis microscopic on a 4K monitor. The interface does not scale.
+Avoid
+JButton btn = new JButton("Save");
+// Hardcoded (x, y, width, height) btn.setBounds(100, 200, 80, 30); frame.setLayout(null);
+Window Resizing
+When users maximize the window, your components stay stuck in the top-left corner, leaving huge empty spaces.
+Visual Consequence
+Save
+OS Font Settings
+Overlapping!
+If a user sets their OS font size to 150% for accessibility, the text will overflow the fixed button boundaries.
+Components clash when fonts change size.
+The Solution: Layout Managers
+Delegate positioning to intelligent algorithms (BorderLayout, FlowLayout, GridBagLayout).
+ICSI486 Software Construction • Week 06
+
+Layout Managers: BorderLayout
+Phase 2: UI Structure
+The Default Layout for JFrame
+Top area. Fixed height, stretches full width.
+NORTH
+Perfect for Toolbars, Menus, or Header Titles.
+App Window
+Left side. Fixed width, stretches vertically. Ideal
+NORTH
+WEST for Navigation Menusor File Trees.
+The main content area. Takes up all remaining space. This is where your JTableor Canvaslives.
+CENTER
+CENTER
+WEST EAST
+Right side. Fixed width. Used for Property Panels,
+EAST
+Tool Palettes, or Details View.
+Bottom area. Fixed height. The standard place for Action Buttons(Save, Cancel) or Status Bars.
+SOUTH
+SOUTH
+JFrame frame = newJFrame(); frame.setLayout(newBorderLayout()); frame.add(table, BorderLayout.CENTER); ICSI486 Software Construction • Week 06
+
+Building the Main View
+MainFrame.java
+Implementing the Primary Adapter src/main/java/ui/MainFrame.java
+1 Structure
+We explicitly set the BorderLayout. This is the foundation for a responsive UI that handles resizing gracefully.
+2 The Data Table
+The JTableis wrapped in a JScrollPane. Without this wrapper, headers won't show, and data won't scroll!
+3 Input Area
+The input form sits in the NORTH. It uses the default FlowLayout of JPanel to arrange label and text field side-by-side.
+Slide 12 • GUI Construction
+
+Data Binding – The Challenge
+Problem Definition
+Domain Data Incompatible JTable View
+List <ThesisDTO> Object [][]
+Objects in Heap Rows & Columns
+Dynamic Object List Static 2D Grid
+How do we convert our clean Domain Objects into raw Table Data without writing messy for loops inside our UI code- The Adapter Pattern Specifically: AbstractTableModel ICSI486 Software Construction • Week 06
+
+The Adapter Pattern in UI
+Structural Pattern
+Modern Java
+Our ThesisDTO is a Record(from Week 4)! We use record accessors like title(), not traditional getters like getTitle().
+ThesisTableModel.java
+Data Flow
+The Client
+JTable getRowCount()
+Delegates directly to the list size.
+Calls getRowCount()
+The Adapter
+ThesisTableModel
+Implements AbstractTableModel aap(wow, Col) → List Lndex
+Calls list.get(index) getValueAt()
+Translates (Row, Col) coordinates into Record field access.
+The Adaptee
+List<ThesisDTO>
+ICSI486 Software Construction • Week 06
+
+The Observer Pattern
+Sequence Diagram
+ICSI486 Software Construction • Week 06
+
+The Command Pattern
+Behavioral Pattern
+Decoupling Invokers from Receivers & Enabling Undo
+Interactive Command Queue Create Update Delete Structure
+<<interface>>
+Command
+New Thesis Edit Title Delete Undo Last
++ execute() : void
++ undo() : void
+Create(Thesis) Update(ID:1) Delete(ID:5)
+CreateThesisCmd
+-service : Service
+FIFO Queue -dto : ThesisDTO
+Execution History (Stack)
+Command Implementation
+Command Manager
+Idle
+ICSI486 Software Construction • Week 06
+}
+
+Implementing the Observer
+Anonymous Inner Class
+Handling User Interaction with ActionListeners
+ThesisController.java
+1 1 Read Input
+Extract raw text from UI components (JTextField) into local variables.
+2 2 Invoke Core
+Pass the data to the Business Logic layer via the primary port
+(Service).
+3 3 Update View
+Notify the TableModel that data has changed so the JTable repaints itself.
+Modern Java Note
+Since Java 8, this verbose anonymous class can be replaced with a concise Lambda Expression:
+saveBtn.addActionListener(e -> { ... });
+ICSI486 Software Construction • Week 06
+
+Starting the UI (Factory Integration)
+Dependency Injection
+Factory Integration & Application Entry Point
+MainApp.java
+Architecture Rule
+The UI Adaptermust NOTinstantiate the Core! It should never know about specific implementations like JdbcThesisRepository. Always program against the interface.
+WRONG: Tight Coupling new ThesisService(new JdbcThesisRepository(...))
+Hardcoding dependencies inside the UI breaks the architecture. The UI shouldn't decide which database to use.
+RIGHT: Factory Pattern
+ServiceFactory.getInstance().getThesisService()
+Delegates creation logic to the Factory from Week 4. The UI receives a fully configured service instance.
+ICSI486 Software Construction • Week 06
+
+The Full Data Cycle (Read)
+UseCase: Display All Data
+Application Starts
+UI / ADAPTER CORE SERVnIeCwE MainFrIaNmFeR()A.sSeTtVRiUsibClTe(UtrRuEe)
+User launches the JAR. The MainFrameconstructor initializes components
+1 components and layouts.
+Controller Requests Data
+The UI Controller (ActionListener or Constructor) asks the Service for data.
+It knows nothing about SQL. 2 thesisService.getAllTheses()
+Fetch from Database
+The Service delegates to the Repository. The JDBC adapter executes the
+3 SQL query.
+SELECT * FROM thesis
+Populate Table Model
+The data returns as a List<ThesisDTO>. The Controller pushes this list our Adapter. 4 tableModel.setData(list) Repaint UI The TableModel notifies the JTable. The Table redraws itself, calling 5 getValueAt()for each cell.
+fireTableDataChanged()
+ICSI486 Software Construction • Week 06
+
+The Full Data Cycle (Create)
+UseCase: Create New Thesis
+User Input & Action
+UI / ADAPTER CORE SERVICE INFRASTRUCTURE
+1 User types data into text fields and clicks the "Save" button.
+Input: "John Doe" -> Click [Save]
+Listener Catches Event
+The Observer (ActionListener) attached to the button wakes up. 2 actionPerformed(ActionEvent e) Controller Extracts Data The Controller reads the raw text from Swing components and creates a DTO.
+3
+String name = nameField.getText()
+Invoke Business Logic
+Controller calls the service. Service validates and delegates to Repository. 4 thesisService.registerThesis(dto) Update & Refresh 5 After DB success, Controller fetches fresh list and updates TableModel.
+model.setData(newList); table.repaint()
+ICSI486 Software Construction • Week 06
+
+Error Handling in the UI
+Resilience
+ActionListener.java
+The Golden Rule
+Do not crash the app!
+Exceptions (stack traces) are for developers, not users. If the database fails, the application window must remain open and responsive.
+Exception Propagation
+CORE / SERVICE
+Encounters error (e.g., DB down)
+Result to User
+THROWS EXCEPTION
+DataAccessException Critical Error ✕
+Database Error: Connection Refused
+Please contact the administrator.
+UI ADAPTER (CONTROLLER)
+Catches exception, translates to friendly message.
+OK
+ICSI486 Software Construction • Week 06
+
+Summary
+Phase 2: Initiated
+UI as Primary Adapter Avoid the "God Class" MVC Separation
+The GUI is simply a plug (Driving Adapter) for our Never write SQL or business logic inside button listeners. Strictly separate concerns: Model(Data), View Hexagonal Core. It translates clicks into Service calls. Keep the UI "dumb" and delegated to the Core. (Presentation), and Controller(Orchestration).
+Layout Managers Adapter Pattern Observer Pattern
+Use BorderLayout and JPanelnesting instead of absolute Use TableModelto adapt our domain List<Thesis> into Implement ActionListener to handle user interactivity positioning to ensure responsiveness on all screens. row/column format required by JTable. asynchronously without blocking the application flow.
+ICSI486 Software Construction • Week 06 • Desktop GUI & Design Patterns
+
+Lab Mission
+Est. Time: 90 min
+Construct the Layout Implement the Adapter
+Build the main JFrame application window using Create the ThesisTableModelclass extending
+BorderLayout. Set up the basic panels for the table AbstractTableModel. This will bridge your List<Thesis> (Center) and the form (North). to the UI table.
+Wire Up "Read" Implement "Create"
+Connect the UI to the ThesisService. Initialize the frame Add a form and an ActionListener to the "Save" by fetching all records from the database and Capture user input, save to DB via Service, and refresh displaying them in the W Table. the table view.
+See you in the Lab!
+
+Putting It All Together
+System Overview
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Request Flow Timeline
+User Action Response Flow
+1
+Click "Save" Button
+MainFrame (Controller)
+2 extractFormData() -> DTO
+ThesisService (Core)
+3 createThesis(dto)
+JdbcThesisRepository
+4 save(entity)
+UI LAYER CORE LAYER INFRASTRUCTURE DATABASE
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Request Flow Timeline Response Flow
+User Action Response Flow
+1
+Click "Save" Button
+MainFrame (Controller)
+2 extractFormData() -> DTO
+ThesisService (Core)
+3 createThesis(dto)
+JdbcThesisRepository
+4 save(entity)
+UI LAYER CORE LAYER INFRASTRUCTURE DATABASE
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06
+
+The Complete Data Journey
+Animated Flow
+Response Flow
+ICSI486 Software Construction • Week 06

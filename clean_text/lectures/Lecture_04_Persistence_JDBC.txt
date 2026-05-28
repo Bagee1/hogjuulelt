@@ -1,0 +1,304 @@
+WEEK 04
+National University of Mongolia
+School of Information Technology and Electronics
+ICSI486 SOFTWARE CONSTRUCTION
+Persistence, JDBC & The Missing Link
+The DAO Pattern & The Road to Permanent Data
+Batnyam Battulga, Ph.D., Dip.-Ing., Dipl.-Inf.
+Lecturer & Course Coordinator
+February 22, 2026
+
+Week 05
+Learning Objectives
+By the end of this lecture and the upcoming lab session, you will have mastered the critical transition from volatile memory to persistent storage.
+DAO & Hexagonal
+Architecture JDBC Connectivity Security & Config
+Understand how Data Access Objects Connect Java applications to relational Secure credentials using .properties files and fit into the architecture as Adapters, databases (H2/MySQL) using the standard prevent leakage with .gitignore.
+keeping the Core clean. JDBC API.
+Preventing SQL Injection The "Magic" Switch
+Learn the #1 security rule: Eliminate vulnerabilities by utilizing PreparedStatementinstead of string Integrate Factory & Singleton patterns to concatenation. toggle between In-Memory and DB storage seamlessly.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 2
+
+Week 05
+Today's Roadmap
+Context Technology Security Connection The Adapter Integration
+The Architecture JDBC & Choosing The 12-Factor Singleton Implementing the Factory
+Puzzle: Where do the Right App & Reloaded: DAO Pattern with Refactoring & we stand- Database (H2 vs Configuration Managing the link JDBC Lab Mission MySQL) Safety ICSI486 Software Construction © 2026 National University of Mongolia Page 3
+
+Problem Statement
+Recap: The Volatile Memory Problem
+The Challenge
+Where are we right now-
+The Issue: Volatile Memory
+Currently, data is stored in Java collections (ArrayList, HashMap).
+These live in the RAM (Random Access Memory).
+Java App RAM Storage JVM Stop
+Result: When the JVM shuts down or crashes, all data is instantly
+Running in JVM ArrayList / Map System Shutdown and irrevocably destroyed.
+The Goal: True Persistence
+DATA LOST FOREVER!
+We need to write data to non-volatile storage (Hard Drive /
+Database Server) so it survives a system restart.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 4
+
+Architectural Context
+The Pieces of the Puzzle
+Ready Ready
+Our Developer Toolbox
+DatabaseConnection Week 02
+A Singleton shell ensuring only one instance exists. Needs implementation logic.
+Singleton Factory
+Connection Manager Object Creator
+RepositoryFactory Week 02
+Decouples creation logic. Currently hardcoded to return dummy in-memory objects.
+Ready
+TODAY
+IThesisRepository Week 03
+The "Port". Our strict contract ensuring the Core doesn't know about implementation details.
+Interface JDBC Adapter
+The Port The Missing Link
+The Missing Link Week 04 (Today)
+JdbcThesisRepository:The actual Adapter connecting all pieces to the DB!
+ICSI486 Software Construction © 2026 National University of Mongolia Page 5
+
+Architecture
+Hexagonal Architecture – Today's Focus
+The Architectural Boundary
+Infrastructure
+1. Inside (Core) Untouched
+Contains ThesisServiceand Thesis Entity.
+No SQL allowed here! Ports / Interfaces
+Pure Java Business Logic.
+2. Boundary (Port) Untouched CORE
+Service &
+The Interface IThesisRepository. Domain
+Service & Domain
+Defines the contract for saving/loading data.
+IThesisRepository
+(Adapter)
+3. Outside (Adapter) Today's Focus
+We replace the implementation:
+InMemoryThesisRepository
+JdbcThesisRepository JDBC Adapter
+ICSI486 Software Construction © 2026 National University of Mongolia Page 6
+
+Technology Stack
+Was ist JDBC- – Der Stack
+Application Layer Java Application
+Java Database Connectivity
+Eine Standard-API für alle Datenbanken
+Java Standard JDBC API
+JDBC (java.sql.*) ist die Brücke zwischen Ihrer Java-
+Anwendung und der relationalen Datenbankwelt. Es abstrahiert die komplexen Netzwerkprotokolle der verschiedenen Datenbankhersteller.
+Delegation Driver Manager
+Unabhängigkeit:Ihr Java-Code bleibt gleich, egal ob Sie MySQL,
+PostgreSQL oder Oracle verwenden.
+Vendor
+MySQL / H2 Driver
+Übersetzung:JDBC übersetzt Java-Methodenaufrufe in Implementation herstellerspezifische SQL-Befehle.
+Plug & Play:Treiber können zur Laufzeit ausgetauscht werden, ohne den Code neu zu kompilieren.
+Persistence Database Server
+ICSI486 Software Construction © 2026 National University of Mongolia Page 7
+
+Technology Choice
+Which Database Should We Use-
+For this course, we need to balance ease of development (Lab) with production readiness.
+Thanks to JDBC, we can switch between these two with zero code changes!
+H2 Database MySQL / MariaDB
+Development / Lab Production
+Type Embedded(Runs inside Java App) Server(Separate Process / Docker)
+Storage Local File (./data/tms.db) or In-Memory Server Hard Drive / Cloud Storage
+Setup Zero Config (Just 1 Maven Dependency) Complex (Install Server, Create User, Grants)
+JDBC Driver org.h2.Driver com.mysql.cj.jdbc.Driver
+Decision: We use H2 in 'MySQL Mode' for the Lab. It mimics a real server without the installation headache.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 8
+
+Clean Code Rule
+The Anti-Pattern: Hardcoded Passwords
+NEVER DO THIS IN PRODUCTION CODE!
+DatabaseConnection.java
+// WRONG: Hardcoding credentials inside the source code
+Connection conn = DriverManager.getConnection(
+"jdbc:mysql://localhost:3306/db",
+"root", // Username
+"mySuperSecret123" // Password exposed!
+);
+Security Risk Inflexibility Team Conflicts
+Source code is often pushed to Git repositories. Bots If the production server password changes, you must Developer A uses password "root", Developer B uses scan GitHub every second for credentials. Your edit the Java code, recompile the entire application, and "1234". Every Git commit breaks the code for the other database will be hacked instantly. redeploy it. person.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 9
+
+The Solution
+External Configuration (12-Factor App)
+The professional approach: Store configuration in the environment, not in the code. This separates config from code.
+1 2 3
+Create Properties File Exclude from Git Define the Mode
+Create a file named database.properties CRITICAL: Add the filename to your Use a configuration switch to control your inside src/main/resources. This file will .gitignore file immediately. This prevents application behavior. We use this later in our hold your secrets and settings. accidental uploads to GitHub. Factory to swap implementations.
+# database.properties # .gitignore app.persistence.mode=DB target/ # Toggle Storage Backend db.driver=org.h2.Driver .idea/ app.persistence.mode=DB db.url=jdbc:h2:./data/tms # Security: Ignore credentials # OR db.user=sa database.properties app.persistence.mode=MEM ICSI486 Software Construction © 2026 National University of Mongolia Page 10
+
+Week 02 Update
+Singleton Reloaded: DatabaseConnection
+Load Properties Register JDBC Driver
+Singleton Pattern
+Reads database.properties Dynamically loads the correct
+DatabaseConnection from the classpath immediately driver class (H2 or MySQL) into when the Singleton is first created memory using Class.forName().
+(Lazy Loading).
+-DatabaseConnectioninstance
+-Connectionconnection
+-Propertiesconfig
++getInstance()
++getConnection()
++getConfigProperty(key) Manage Connection Expose Configuration
+Ensures only one physical Acts as a central configuration connection is open. Reuses the hub. Other classes (like the existing connection if it is still Factory) can query it for settings valid. like app.persistence.mode.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 11
+
+Singleton Pattern
+Code: Loading Properties
+ICSI486 Software Construction © 2026 National University of Mongolia Page 12
+
+Singleton Pattern
+Code: Connection Management
+ICSI486 Software Construction © 2026 National University of Mongolia Page 13
+
+Design Pattern
+What is a DAO-
+Pattern Architecture VISUAL FLOW
+Data Access Object
+A structural pattern that provides an abstract interface to Business / Service Layer
+1. Request some type of database or other persistence mechanism. Calls methods like findAll() It completely isolates the application/business layer from the persistence layer.
+The Purpose DAO Interface
+2. Contract
+Defines contract (Port)
+Separation of Concerns: The Business Logic (Service) should never know about SQL, JDBC, or database connections. The DAO hides all this complexity behind a clean interface. DAO Implementation 3. Execute Contains JDBC & SQL Code Hexagonal Integration Service Interface DAO Impl Core Logic Port Adapter Database 4. Persist Raw Data Storage ICSI486 Software Construction © 2026 National University of Mongolia Page 14
+
+Security Critical
+Danger: SQL Injection
+THE #1 SECURITY VULNERABILITY IN DATABASES
+VULNERABLE CODE (Do NOT use) FATAL ERROR
+// Attack: User inputs "' OR '1'='1"
+String sql = "SELECT * FROM users WHERE name = '" + userInput + "'";
+// Result: SELECT * FROM users WHERE name = '' OR '1'='1'
+// Database returns ALL users (Bypasses authentication!)
+String Concatenation treats user input as executable SQL code.
+SECURE CODE (PreparedStatement) SAFE
+// Secure: Use placeholders (-)
+String sql = "SELECT * FROM users WHERE name = -";
+PreparedStatement stmt = conn.prepareStatement(sql); stmt.setString(1, userInput); // Input treated strictly as data Placeholders separate SQL logic from data. The database is never tricked.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 15
+
+Best Practice
+Resource Management: try-with-resources
+The Magic: AutoCloseable
+JdbcThesisRepository.java
+Java (since v7) checks if an object implements the interface. If it does, Java calls the .close() method for you 1 String sql = "INSERT INTO thesis ..."; automatically.
+AutoCloseable
+2
+3 // Anything in ( ) is auto-closed
+4 try (Connectionc = DB.getConnection();
+Guaranteed Safety
+5 PreparedStatements = c.prepare(sql)) {
+6 Resources are closed even if an exception occurs inside the try-block. This prevents memory leaks and database 7 // Execute standard logic connection exhaustion.
+8 s.setString(1, "My Thesis");
+9 s.executeUpdate();
+10
+No more "finally" hell
+11 } catch (SQLException e) {
+12 throw new RuntimeException(e); Before Java 7, you had to write nested try-catch-finally blocks just to close connections. This modern syntax 13 } reduces boilerplate code by ~60%.
+14 // Resources are GONE here! Safe!
+ICSI486 Software Construction © 2026 National University of Mongolia Page 16
+
+JDBC Adapter Implementation
+Adapter Implementation: Create/Save
+JdbcThesisRepository.java
+@Override public void save(Thesis thesis) {
+String sql = "INSERT INTO thesis (title, score, status) VALUES (-, -, -)"; try (Connection conn = DatabaseConnection.getInstance().getConnection(); PreparedStatementstmt = conn.prepareStatement(sql)) { stmt.setString(1, thesis.getTitle()); stmt.setDouble(2, thesis.getScore()); stmt.setString(3, thesis.getStatus().name()); // Enum -> String stmt.executeUpdate(); // Execute the write operation } catch (SQLException e) {throw new RuntimeException("Database save failed", e); } } ICSI486 Software Construction © 2026 National University of Mongolia Page 17
+
+JDBC Adapter
+Adapter-Implementierung: Read & Mapper
+JdbcThesisRepository.java
+List<Thesis> results = new ArrayList<>();
+String sql = "SELECT * FROM thesis"; try (Connectionc = DatabaseConnection.getInstance().getConnection(); Result Set Iteration PreparedStatement s = c.prepareStatement(sql); The ResultSetacts like a cursor. rs.next() moves to the next row. We loop until it returns ResultSet rs = s.executeQuery()) { // Auto-Closed! false.
+while (rs.next()) { // Cursor moves row by row results.add(mapRowToThesis(rs)); // Delegate mapping } } catch (SQLExceptione) { throw newRuntimeException(e); } The Mapper Pattern Translates SQL types (VARCHAR, INT) into return results; Java Objects (Enum, String). This solves the } "Object-Relational Impedance Mismatch".
+private Thesis mapRowToThesis(ResultSet rs) throws SQLException {
+Thesis t=new Thesis(rs.getString("title"),ThesisStatus.valueOf(rs.getString("status"))) ;// Enum conversion t.setScore(rs.getDouble("score")); return t; } ICSI486 Software ConsptruucbtiolnicList<Thesis> findAll() { © 2026 National University of Mongolia Page 18
+
+Data Transfer Pattern
+What is a DTO-
+DTO Pattern Visualization
+Data Transfer Object
+A DTO is an object that carries data between processes. Its sole purpose is to transfer data, without containing any business logic. It's often a simple POJO or Record.
+Why use it-
+Decoupling & Security:Decouples the internal domain model from the external API view.
+It hides sensitive data (passwords, internal IDs) and sends only what the client needs.
+Architecture Layering
+The DTO pattern creates a boundary between the Service Layer and the Presentation Layer. It allows the internal model to evolve HERE independently of the external API contract.
+F
+L Thesis (Entity) mapped ThesisDto sent Client / UI
+O
+Rich Model Data Only Consumer
+W
+ICSI486 Software Construction © 2026 National University of Mongolia Page 19
+
+Architectural Design
+Domain Entities vs. DTOs
+Understanding the critical separation between your internal business model and the data you expose to the world is key to a robust Hexagonal Architecture.
+Domain Entity Core / Internal Data Transfer Object Boundary / External
+Location Inside the Core Domain(Center of Hexagon) At the Boundaries(Adapters / API)
+Behavior Rich Logic (Calculations, Validation Rules) None (Just Getters/Setters, "Dumb" Container) State Mutable (State changes over lifecycle) Immutable (Read-only snapshot of data) Structure Complex (Relationships, Hidden Fields) Flat & Tailored (Optimized for UI/Network) Security Contains Sensitive Data (Passwords, Internal IDs) Safe (Sensitive data is stripped out) Pro Tip: Never pass your Entities directly to the UI! Use DTOs to create a safe contract.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 20
+
+Data Transfer Objects
+Modern Java: DTOs with Records
+ThesisService.java
+1 // 1. Define DTO in a SINGLE line (Java 14+). Immutable & Auto-generated methods.
+2 public record ThesisDto(String title, double score, String statusLabel) {}
+3
+Java Records
+4 public classThesisService {
+No more boilerplate! The recordkeyword
+5 automatically generates the constructor,
+6 Public ThesisDto getThesisForUi(String id) { getters, equals(), hashCode(), and toString().
+7 // 2. Load the "Smart" Entity from Core (Business Logic)
+8 Thesis entity = repository.findById(id);
+9
+10 // 3. Map Entity -> DTO (Decoupling) Protection Boundary
+11 return new ThesisDto( We only expose specific fields (title, score) and convert complex types 12 entity.getTitle(), (Enum) to simple ones (String). Internal 13 entity.getScore(), logic remains hidden in the Core.
+14 entity.getStatus().toString() // Convert Enum to simple String
+15 );
+16 }
+17 }
+ICSI486 Software Construction © 2026 National University of Mongolia Page 21
+
+Integration & Summary
+The Big Picture & Lab Mission
+Sprint
+The Factory Switch
+Backlog
+Main Application
+"app.persistence
+Create database.properties (); } }
+.mode" and add to .gitignore Security
+Factory
+Refactor DatabaseConnection to load H2 Driver & Properties
+ThesisService Implement
+JdbcThesisRepository using
+PreparedStatement
+The Ultimate Test: Stop app ->
+JdbcAdapter
+Start app -> Data must survive!
+H2 Database
+End-to-End Runtime
+Flow
+ICSI486 Software Construction © 2026 National University of Mongolia Page 22
+
+Conclusion
+Summary & Key Takeaways
+We have successfully transitioned from volatile memory to persistent storage, building a robust, secure, and flexible architectural foundation.
+Architecture &
+JDBC & H2 Security First
+DAO
+Isolated database logic from business logic. Mastered standard Java database Secured credentials via .properties files The JdbcThesisRepository acts as a clean communication (java.sql) and implemented (excluded from Git) and eliminated SQL persistence adapter within our Hexagonal an embedded H2 database for rapid, zero- Injection risks by strictly using Architecture. config development. PreparedStatement.
+Data Ultimate
+Encapsulation Flexibility
+Implemented DTOsusing modern Java Leveraged the Factory Patternand
+Records to safely transfer data to the UI, Singleton Config to toggle between In- effectively hiding and protecting our smart Memory and Database storage with a single Domain Entities. configuration change.
+ICSI486 Software Construction © 2026 National University of Mongolia Page 24

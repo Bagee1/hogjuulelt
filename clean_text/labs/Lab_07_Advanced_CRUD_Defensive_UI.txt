@@ -1,0 +1,38 @@
+Lab Assignment Week 7: Advanced CRUD & Defensive UI
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Context: Our UI can read and create data. This week, we implement the missing pieces: Update and Delete. We will introduce "Master-Detail" navigation (clicking a table row fills the form) and make our UI "Defensive" by catching validation exceptions from the Core and showing user- friendly popup dialogs.
+User Stories (Sprint 7)
+• US 1 (Master-Detail): As a user, when I click on a row in the table, the text fields should populate with that record's data, and the application should remember the selected ID.
+• US 2 (Defensive Delete): As a user, when I click "Delete", I want to see a confirmation dialog (JOptionPane) before the record is permanently deleted.
+• US 3 (Robust Save/Update): As a user, if I leave a field empty or enter invalid data, the application must not crash. Instead, it must catch the IllegalArgumentException from the Core and display a warning popup.
+Starter-Kit / Code Skeletons
+1. adapter.primary.ui.MainFrame.java (initListeners method)
+Java
+// TODO 1: Declare this class variable at the top of your MainFrame class!
+// private Long selectedThesisId = null; private void initListeners() {
+// --- 1. MASTER-DETAIL SELECTION --- table.getSelectionModel().addListSelectionListener(e -> { if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) { int row = table.getSelectedRow(); // TODO 2: Get the ID from column 0 and store it in selectedThesisId // selectedThesisId = (Long) tableModel.getValueAt(row, 0); // TODO 3: Get Title (col 1) and Score (col 2) and update the text fields.
+// TODO 4: Change the saveButton text to "Update" and enable the deleteButton.
+}
+});
+
+// --- 2. DELETE WORKFLOW --- deleteButton.addActionListener(e -> { if (selectedThesisId != null) { // TODO 5: Show a JOptionPane.showConfirmDialog ( YES_NO_OPTION).
+// TODO 6: If the user clicks YES:
+// - Wrap in a try-catch block.
+// - Call service.deleteThesis(selectedThesisId).
+// - Call resetForm() and loadData().
+// - Catch Exceptions and show a
+JOptionPane.showMessageDialog on error.
+}
+});
+// --- 3. ROBUST SAVE/UPDATE --- saveButton.addActionListener(e -> {
+// TODO 7: Wrap the following logic in a try-catch block!
+// Catch IllegalArgumentException (for validation errors) and
+Exception (for DB errors).
+// Display appropriate JOptionPane messages for both.
+// TODO 8: Check: if (selectedThesisId == null)
+// -> Call service.createThesis(...)
+// else
+// -> Call service.updateThesis(selectedThesisId, ...)
+// TODO 9: Call resetForm() and loadData() to refresh the UI.
+});
+}

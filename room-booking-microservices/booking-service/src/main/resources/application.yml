@@ -1,0 +1,16 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: booking-service
+  sql:
+    init:
+      mode: always
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+services:
+  student-url: ${STUDENT_SERVICE_URL:http://localhost:8081}
+  room-url: ${ROOM_SERVICE_URL:http://localhost:8082}
+  notification-url: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}

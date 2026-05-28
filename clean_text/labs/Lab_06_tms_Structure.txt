@@ -1,0 +1,34 @@
+tms-project/
+├── .gitignore <-- WICHTIG: Hier "database.properties" eintragen!
+├── pom.xml <-- Maven Config (Hier kommt die H2-Dependency rein)
+│
+├── src/main/resources/
+│ └── database.properties <-- Unsere Config (URL, User, Passwort, Modus)
+│
+└── src/main/java/
+└── mn/edu/num/tms/
+│
+├── core/ <-- DER KERN: Darf keine Datenbank-Klassen kennen!
+│ ├── domain/
+│ │ ├── Thesis.java (Die smarte Entity mit Daten & Logik)
+│ │ └── ThesisStatus.java (Enum: DRAFT, SUBMITTED, GRADED)
+│ │
+│ ├── application/
+│ │ ├── ThesisService.java (Die Geschäftslogik: Nutzt das Interface)
+│ │ └── ThesisDto.java (Das neue Record: Dummer Datencontainer für die UI)
+│ │
+│ └── ports/ <-- DIE GRENZE: Verträge mit der Außenwelt
+│ └── IThesisRepository.java (Interface: save(), findAll())
+│
+├── infrastructure/ <-- DIE TECHNIK: Hier passiert die "Drecksarbeit"
+│ ├── config/
+│ │ └── DatabaseConnection.java (Unser Singleton: Liest die .properties Datei)
+
+│ │
+│ └── persistence/
+│ ├── JdbcThesisRepository.java (Unser neues DAO: Macht echtes SQL per JDBC)
+│ ├── InMemoryThesisRepository.java (Der alte RAM-Speicher aus Woche 2)
+│ └── RepositoryFactory.java (Der Schalter: Wählt zwischen JDBC und InMemory)
+│
+└── ui/ <-- DIE BENUTZEROBERFLÄCHE
+└── Main.java (Startet das System, baut die Factory auf, zeigt Menü)s

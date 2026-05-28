@@ -1,0 +1,507 @@
+National University of Mongolia
+Department of Computer Science
+ICSI486 | Software Construction
+Modern Interfaces
+RESTful APIs & JSON
+Instructor
+Batnyam Battulga, Ph.D.
+Dipl.-Ing., Dipl.-Inf.
+
+ICSI486 Week 10
+Learning Objectives
+Understand REST principles
+Master the fundamental constraints and architectural style of RESTful services, including correct usage of HTTP verbs.
+Design Resource-Oriented Endpoints
+Learn to structure URLs around nouns (resources) rather than verbs (actions) for a cleaner
+API design.
+Produce and Consume JSON
+Utilize the Google Gson library to serialize Java objects into JSON format and deserialize incoming data.
+Handle HTTP Status Codes
+Goal: REST Adapter
+Return semantic status codes (200, 201, 404, 500) and structured JSON error messages
+By the end of this lecture, you will add a fully instead of HTML pages.
+functional REST API adapter to our Hexagonal
+Architecture.
+Test & Implement
+Verify endpoints using Postman/cURL and implement the ThesisRestController adapter modifying the core domain.
+Slide 2
+
+ICSI486 Week 10
+Recap: Where are we-
+Today's Mission
+So Far Today
+Domain Core & Ports
+New Adapter: REST API
+The Hexagon. Business logic is isolated and stable.
+Adding a machine-readable interface for external systems.
+Implemented Adapters
+Key Deliverables
+1. Swing UI
+JSON Data Format
+2. HTML/JSP Web
+/api/theses(CRUD)
+Core stays untouched!
+Functional Monolith
+Slide 3
+
+ICSI486 Week 10
+The Hexagonal Triumph
+NEW TODAY
+Adapter 3
+REST API
+Domain
+Core
+JSON HTTP
+ThesisService
+Machine-readable interface. Does not change logic. REMAINS
+UNTOUCHED
+Slide 4
+
+ICSI486 Week 10
+What is an API-
+Application Programming Interface
+It stands for Application Programming Interface. It defines how software components should interact.
+The Waiter Analogy
+A Contract Between Systems
+Guest (Client):You order form the menu.
+Essentially a formal contract between two software systems. It specifies the request format and guaranteed response structure.
+The Interaction Flow Waiter (API):Takes order to kitchen & brings food.
+Client (Requests) API (Processes) Server (Responds)
+Kitchen (Server):Prepares the meal (Data).
+Slide 5
+
+ICSI486 Week 10
+Evolution of Web Services
+2010s - Present
+REST & JSON
+1990s
+Representational State Transfer
+RPC
+Remote Procedure Call Lightweight, flexible, resource-based.
+The modern standard for mobile and
+Tightly coupled execution. Functions web APIs.
+called on remote servers as if they were local.
+Industry Standard
+2000s
+SOAP & XML
+Simple Object Access Protocol
+Heavyweight, strict standards.
+Enterprise favorite but complex
+(WSDL, excessive XML tags).
+Slide 6
+
+ICSI486 Week 10
+What is REST-
+Origin Story (2000)
+Introduced by Roy Fielding in his doctoral dissertation. It defined how the web should work at scale.
+Architectural Style, Not Protocol
+Unlike SOAP, REST is not a rigid protocol. It is a set of design constraints and principles for distributed systems.
+Representational State Transfer
+Uses Standard HTTP
+REST leverages the full potential of HTTP standards (URIs, methods, headers, status "Software architecture that relies on a stateless, client- server, cacheable communications protocol." codes) rather than fighting against them.
+Slide 7
+
+ICSI486 Week 10
+The 6 REST Constraints
+1. Client-Server
+Strict separation of concerns. The UI (Client) is independent of Data Storage (Server), allowing them to evolve separately.
+2. Stateless
+The server stores no client context. Every request must contain all necessary information (e.g., auth tokens) to be understood.
+3. Cacheable
+Responses must define themselves as cacheable or not. This prevents clients from reusing stale data and improves performance.
+4. Uniform Interface
+Roy Fielding's Rules
+The core distinction. Architecture is simplified and decoupled through standard resources (URIs) and standard verbs (GET, POST). To be truly "RESTful", an API must strictly adhere to these architectural constraints.
+5. Layered System
+The client cannot tell if it is connected directly to the end server or an intermediary (like a load balancer or Focus for Lab 10:
+proxy).
+Statelessness & Uniform Interface
+6. Code on Demand (Optional)
+Servers can temporarily extend or customize client functionality by transferring executable code (e.g., JavaScript applets).
+Slide 8
+
+ICSI486 Week 10
+Constraint: Statelessness
+No Server Memory
+Stateful vs. Stateless
+No client context is stored on the server between requests. The server does not remember previous interactions.
+GET /thesis/5
+Self-Contained Requests
+POST /thesis (Token)
+Every request must contain all necessary information to be understood (e.g., authentication tokens, user IDs, resource details).
+Wrong (Stateful):
+"Hey Server, remember I logged in-"
+Scalability Benefit
+Correct (Stateless):
+Since any server can handle any request without needing prior context, horizontal "Hey Server, here is my token proving I am logged in." scaling becomes trivial.
+Slide 9
+
+ICSI486 Week 10
+The Uniform Interface - Resources
+1 The Collection Resource
+Think in Nouns
+GET https://api.university.com /theses
+In REST, the focus is on Resources (things), not
+Actions (verbs). A URL is an address to a thing, not a
+Returns a Listof all theses.
+command to do something.
+Resource = Noun 2 The Single Document Resource
+Users, Theses, Products, Orders
+GET https://api.university.com /theses /5
+Avoid Verbs in URL getTheses, createUser, deleteItem
+Use HTTP Methods (GET, POST) for actions instead!
+Returns one specificthesis with ID 5.
+Slide 10
+
+ICSI486 Week 10
+Good vs. Bad API Endpoints
+RPC Style (Bad) REST Style (Good)
+Focus on Actions (Verbs) Focus on Resources (Nouns)
+/createThesis Verb Collection Resource
+/api/theses
+/deleteThesis-id=5 Query Param
+VS Single Document Resource
+/api/theses/5
+/updateScore Verb
+Why it's good:The URL stays clean. The action (Create, Read, Update, Delete) is determined by the HTTP Verb (POST, GET, PUT, DELETE).
+Why it's bad: URLs should identify resources, not the actions performed on them. Actions are defined by HTTP methods.
+Slide 11
+
+ICSI486 Week 10
+HTTP Methods (The CRUD Mapping)
+CRUD Operations HTTP Verbs
+Database Perspective REST API Perspective
+POST
+Create INSERT Not Safe
+GET
+Read SELECT Safe
+Update UPDATE PUT / PATCH Idempotent (PUT)
+DELETE
+Delete DELETE Idempotent
+Slide 12
+
+ICSI486 Week 10
+Deep Dive: GET
+Purpose: Read Data
+Used exclusively to retrieve resource representations. It serves as the "Read" operation in CRUD (e.g., fetching a list of theses).
+Property: Safe
+GET requests are read-only and have no side effects. They do not modify the server state or alter the database.
+Property: Idempotent
+Calling the endpoint once or 100 times yields the same state on the server. Repeating the
+HTTP GET request is harmless.
+Safe Idempotent
+Server-Side Behavior
+"The server has no memory of previous GET requests.
+Typically maps to SQL SELECTqueries. Responses are often cacheable by browsers to improve
+Each request stands alone." improve performance.
+Slide 13
+
+ICSI486 Week 10
+Deep Dive: POST
+Purpose: Create a New Resource
+The fundamental purpose of POST is to submit an entity to the specified resource, often causing a change in state or side effects on the server (e.g., creating a new Thesis).
+Property: Not Safe
+Unlike GET, POST requests are not safe because they are intended to modify the server's state (create, update, or process data).
+Property: Not Idempotent
+Create Operation
+Calling POST multiple times creates multiple resources. If you send the same request 5 times, you might Maps to SQL INSERT end up with 5 identical entries in the database.
+POST /api/theses HTTP/1.1
+Content-Type: application/json
+Payload: Request Body
+{
+Data is sent securely within the request body (usually as JSON), not in the URL parameters. "title": "REST API Design" This allows for complex and large data structures. } Slide 14
+
+ICSI486 Week 10
+Deep Dive: PUT vs. PATCH
+PUT: Full Replacement
+Replaces the entire resource at the target URL with the request payload.
+Warning: If you omit a field in the JSON body, it is typically considered "null" or removed from the database. The Difference PUT /theses/1 PATCH: Partial Modification {"title": "New"} Applies partial updates to the resource.
+Deletes other fields!
+Benefit: Send only the fields that changed (e.g., just {"score": 95}). The rest of the object stays untouched.
+PATCH /theses/1
+Idempotency check
+{"score": 90}
+PUT is idempotent (State is constant no matter how many times you call it). PATCHis not
+Keeps title, etc.
+necessarily idempotent (though usually implemented that way).
+Slide 15
+
+ICSI486 Week 10
+Deep Dive: DELETE
+Purpose: Remove a Resource
+The DELETE method requests that the origin server remove the association between the target resource and its current functionality.
+Property: Idempotent
+DELETE is idempotent. Making multiple identical requests ends up having the same result as a single request.
+Request Example
+Note:Calling DELETE on ID 5 once removes it (200 OK / 204 No Content). Calling it again yields the same system state (even if the second response is 404 Not Found).
+DELETE /api/theses/5 HTTP/1.1
+Host: university.edu
+Common Responses
+Authorization: Bearer...
+Typically returns 204 No Content (success, no body) or 200 OK if the response includes a body describing the action.
+Server Response:
+HTTP/1.1 204 No Content
+Slide 16
+
+ICSI486 Week 10
+Richardson Maturity Model
+What is it-
+LAB TARGET
+A model developed by Leonard Richardson that breaks down the principal elements of HTTP Verbs a REST approach into steps.
+2 Use GET, POST, PUT, DELETE correctly.
+200 OK 404 Not Found
+Our Goal: Level 2
+Resources
+For this course and most modern web
+1
+Individual URIs for distinct things.
+APIs, Level 2 is the standard. It balances pragmatic design with RESTful principles. /api/theses/5 Increasing Maturity 0 Slide 17
+
+ICSI486 Week 10
+Communication - How APIs talk back
+The Universal Language
+HTTP Status Codes provide a standardized way for web servers to communicate the outcome of a request to the client, regardless of the programming language used.
+404
+The "Waiter" Metaphor
+Think of the API as a waiter. When they return from the kitchen (Server), they don't just bring food (Data); they also tell you if the order was successful or if the steak is out of stock (Status Code).
+200
+Machine Readability
+Unlike HTML error pages designed for humans, 3-digit status codes allow your software
+Status Codes adapters (Swing, Android) to react programmatically to success or failure.
+The contract between Client and Server regarding the
+The 3-Digit Structure result of an operation.
+Every response contains a 3-digit integer. The first digit defines the class of the response (e.g., 2xx for Success, 4xx for Client Error).
+Slide 18
+
+ICSI486 Week 10
+HTTP 2xx Family (Success)
+CODE 200
+OK
+The standard response for successful HTTP requests. The actual payload depends on the request method (e.g., GET returns the resource, POST returns the action result).
+CODE 201
+Created
+The request has been fulfilled and resulted in a new resource being created.
+"It worked!"
+Typically the response to a POST request (e.g., creating a new Thesis).
+The 2xx class communicates success. If you
+CODE 204 see green, your API call went through perfectly.
+No Content
+The server successfully processed the request but is not returning any content.
+This is the standard response for a successful DELETE operation.
+Slide 19
+
+ICSI486 Week 10
+HTTP 4xx Family (Client Errors)
+400 Bad Request
+General client error. The server cannot process the request due to a client error (e.g., malformed request syntax, invalid message framing, or deceptive request routing).
+{"error": "Invalid JSON format"}
+401 Unauthorized
+Authentication is required and has failed or has not been provided. Think of it as
+"Unauthenticated".
+Login required
+403 Forbidden
+The server understands the request but refuses to authorize it. Unlike 401, re-authenticating won't make a difference. "It's You, Not Me" No permission (e.g., Admin only) 4xx errors indicate that the fault lies with the sender (the Client). The request contains bad syntax or 404 Not Found cannot be fulfilled.
+The requested resource could not be found but may be available in the future. The most famous web error.
+Invalid ID / Resource missing
+Slide 20
+
+ICSI486 Week 10
+HTTP 5xx Family (Server Errors)
+500 Internal Server Error
+The generic "catch-all" error. This usually indicates a bug in the backend code, such as an unhandled NullPointerException or a logic failure.
+503 Service Unavailable
+The server is not ready to handle the request. Common causes include the database being down, the server being overloaded, or maintenance downtime.
+"It's not you, it's me"
+Developer Responsibility
+Unlike 4xx errors, 5xx errors indicate the server failed to fulfill a valid request.
+A 5xx error means we made a mistake. Our goal is to use robust try-catch blocks to prevent these and return meaningful 4xx errors instead.
+try { ... } catch
+Slide 21
+
+ICSI486 Week 10
+Data Format: Why JSON-
+JavaScript Object Notation (JSON)
+A text-based data interchange format derived from JavaScript object syntax, but now a standalone standard.
+Extremely Lightweight
+Minimal syntax overhead compared to XML. Less bandwidth usage makes it ideal for mobile networks and high-performance APIs.
+JSON
+Language Independent
+Despite the name, JSON is supported by virtually every modern programming language (Java,
+Python, C#, etc.).
+{
+"id": 1,
+Human Readable "format": "json",
+"isCool": true
+Easy to read and write for humans. Simple structure: key-value pairs and ordered lists }
+(arrays).
+Slide 22
+
+ICSI486 Week 10
+JSON vs. XML
+XML JSON
+Extensible Markup Language JavaScript Object Notation
+<thesis> {
+<id>5</id> "id": 5,
+<title>REST API</title> "title": "REST API"
+</thesis> }
+VS
+Heavyweight Tags Lightweight Syntax
+Opening and closing tags repeat the key names, doubling size. Map/Key-Value based. No redundant closing tags.
+Complex Parsing Mobile Optimized
+Requires DOM or SAX parsers, which are CPU intensive. Smaller payload size means faster transmission over 4G/5G.
+Slide 23
+
+ICSI486 Week 10
+JSON Syntax Rules
+Structure & Types thesis_data.json
+JSON (JavaScript Object Notation) is built on two structures: a collection of name/value pairs and an ordered list of values. 1 { 2 "id":101, // Number: No quotes 3 "title":"RESTful API Design", // String: Double quotes Objects {} 4 "isPublished":true, // Boolean: true/false Unordered sets of key/value pairs. Enclosed in curly braces.
+5 "score":95.5,
+6 "tags":[ // Array: Ordered list []
+7 "api",
+Arrays
+[] 8 "json",
+Ordered lists of values. Enclosed in square brackets.
+9 "web"
+10 ],
+11 "author":{ // Object: Key/Value pairs {}
+Strings
+""
+12 "name":"Batnyam B.",
+Must be enclosed in double quotes. Keys are always strings.
+13 "verified":true
+14 }
+15 }
+Numbers & Booleans
+#
+No quotes for numbers (integer/float) or true/false.
+Unlike JS, trailing commas are usually not allowedin standard JSON.
+Slide 24
+
+ICSI486 Week 10
+Serialization in Java
+Serialization is the process of converting a Java Object (in-memory) into a data format (JSON String) suitable for transmission. Deserialization is the reverse process.
+Java Object JSON String
+ThesisDTO.java network_payload
+Serialization public class ThesisDTO public classThesisDTO { { pprriivvaatteeinitnitd i=d 1011;01 ""iidd"": 110011, privateintid = 101; "id": 101, prppirrviiavvtaaettSeetSrtiSrntigrntiginttgiltetlie=t l="e R"ERSETS""T;R"E;ST" "ti""tttiilttell":ee """:R E""SRRTEE"SS,TT"", prppirrviiavvtaaettbeeoboolboeolaoenlaaencaatncitvaiecvte=i v=te rtureu;et;rue "ac""aatccittviievv":ee ""t:r utterruuee } } Deserialization Lives in RAM (Heap Memory) Transmitted over HTTP (Text) Why- You cannot send a Java Object over the internet directly. It must be flattened into text.
+Slide 25
+
+ICSI486 Week 10
+Popular Java JSON Libraries
+Google Gson Jackson
+Lightweight & Simple Enterprise Standard
+Zero dependencies (Single JAR) Built into Spring Boot
+Easy setup (No config needed) High performance & Streaming API
+Compact footprint Extensive annotation support
+VS
+Instantiation: Instantiation:
+Gson gson = new Gson(); ObjectMapper m = new ObjectMapper();
+Best for:Simple Servlets, Android apps, and quick prototypes where setup Best for:Large enterprise systems, Spring applications, and handling speed matters. complex object mappings.
+Slide 26
+
+ICSI486 Week 10
+Using Google Gson
+ThesisRestController.java
+Java to JSON Serialization importcom.google.gson.Gson;
+Converting a Java object graph into a JSON string is called serialization. With the Gson library, this complex process is reduced to just two lines of code.
+// ... inside your doGet() method
+Instantiate Gson
+1
+Create a new Gsoninstance. You typically only need one per // 1. Retrieve data (Core Domain) application (singleton).
+ThesisDTOthesis=newThesisDTO(
+101,
+2 Call toJson() "Modern RESTful Architectures",
+Pass your Java object (DTO, Entity, List) to the toJson()
+95.5 method.
+);
+Result
+3
+// 2. Instantiate Gson Library
+You receive a standard JSON Stringready to be written to the
+HTTP response. Gsongson=newGson();
+// 3. Serialize Object to JSON String
+Note:Gson automatically handles nested objects and arrays. You don't need to manually iterate through lists!
+StringjsonString=gson.toJson(thesis);
+// 4. Debug Output
+System.out.println(jsonString);
+/* Output:
+* {"id":101,"title":"Modern RESTful
+Architectures","score":95.5}
+*/
+Slide 27
+
+ICSI486 Week 10
+HTTP Headers (The Content-Type)
+ThesisServlet.java
+Setting the Metadata 1
+HttpServletReques HttpServletRespons protectedvoiddoGet( req, res)
+Before sending the actual JSON data, you must tell the client (browser or app) t e how to interpret the response stream. { 2 // 1. Set the Content-Type 3 header // Crucial! Otherwise, browser might treat it as MIME Type 4 text/html "application/json application/json 5 res.setContentType( ); " Tells the browser: "This is data, not a webpage." 6 // 2. Set Character Encoding to UTF- 7 8 setCharacterEncodin 8 res. ("UTF-8"); g Character Encoding 9 // 3. Convert Object to JSON String (using UTF-8 10 Gson) Crucial for supporting international characters (e.g., Mongolian 11 StringjsonString=this.gson.toJson(thesisList); Cyrillic).
+12
+// 4. Write to response
+13 stream
+14 PrintWriterout=res.getWriter();
+Client Parsing 15 out.print(jsonString);
+16 out.flush();
+Correct headers trigger automatic JSON parsing in tools like fetch()or axios.
+17 }
+Always set headers beforeobtaining the PrintWriter!
+Slide 28
+
+ICSI486 Week 10
+Error Handling in our API
+Stop Sending HTML!
+When an API fails, it must speak the client's language (JSON). Default web response_404.json server error pages break mobile apps and frontend parsers.
+1 {
+2 "timestamp":"2026-03-20T10:15:30Z",
+No HTML Pages
+A mobile app cannot display a Tomcat 404 HTML page. It 3 "status":404, // Explicit status code expects a data structure.
+4 "error":"Not Found",
+5 "message":"Thesis with ID 999 does not exist",
+6 "path":"/api/theses/999"
+Consistent Schema
+7 }
+Always return the same error fields: status, error, message.
+Implementation Tip
+Match Headers Create a Java class ApiError.java(DTO) and use Gson to serialize it whenever an exception is caught in your controller.
+The HTTP Status code in the header (e.g., 404) must match the
+JSON body content.
+Slide 29
+
+ICSI486 Week 10
+Testing APIs: Postman & cURL
+1 Postman (GUI)Visual
+Params Auth
+Beyond the Browser Body
+POST http://localhost:8080/api/theses SEND
+Browsers are optimized for GET (viewing pages). To fully test a REST API (create, update, delete), you { need specialized tools to send JSON payloads and "title": "RESTful Architectures", manipulate HTTP methods. "student": "Batnyam Battulga" } Browsers Good for simple GET requests. Hard to send POST bodies or 2 cURL (Terminal)Command Line headers without JavaScript.
+user@macbook:~
+GUI Tools (Postman/Insomnia)
+$ curl -X POST \
+User-friendly interface to build requests, save collections, and view formatted JSON responses.
+-H "Content-Type: application/json" \
+-d '{"title":"New Thesis"}' \
+CLI Tools (cURL) http://localhost:8080/api/theses
+Command-line standard. Great for quick tests, scripting, and server-side debugging.
+# Returns: {"id": 10, "status": "created"}
+Slide 30
+
+ICSI486 Week 10
+Summary & Lab 10 Mission
+Lab Assignment
+Lab 10: The REST Adapter
+Key Takeaways
+Your mission, should you choose to accept it, is to expose the Thesis Management System to the world.
+Resource-Based
+REST uses Nouns (URLs), not Verbs. Design your API around your domain entities. Objectives
+Create ThesisRestControllerclass
+Implement GET (List & Single), POST, DELETE
+HTTP Verbs Context
+Use Gson for serialization
+Use methods correctly: GET (Safe), POST (Create), PUT/PATCH
+Do NOT modify ThesisService!
+(Update), DELETE (Remove).
+JSON & Status Codes
+Postman Tomcat
+Communicate via lightweight JSON and standard HTTP status codes
+(2xx, 4xx, 5xx).
+Open IDE
+Slide 31

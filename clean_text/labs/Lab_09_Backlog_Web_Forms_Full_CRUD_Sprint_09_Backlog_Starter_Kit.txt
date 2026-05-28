@@ -1,0 +1,75 @@
+Lab 09 Sprint 09 Backlog: Web Forms &
+Full CRUD
+Course: ICSI486 Software Construction | Project: NUM Thesis Management System
+Epic: Extend your stateless Web Adapter (Servlet & JSP) to support data mutation. You will implement the ability to Create and Delete database records via the browser using HTML forms, HTTP POST, and the Post-Redirect-Get (PRG) pattern. The Hexagonal System Core must remain 0% changed!
+User Stories & Acceptance Criteria
+User Story 1: The Input Form (View)
+As a user, I want to see a form on the webpage to enter a new thesis.
+• Acceptance Criteria:
+- [ ] Inside the theses.jsp file, a <form> tag is placed above or below the table.
+- [ ] The form contains the attributes action="theses" and method="POST".
+- [ ] There are two <input> fields (e.g., for title and score).
+- [ ] CRITICAL: Every input field has a name attribute (e.g., name="title"). This is required for the Java server to read the data.
+- [ ] The form contains a <button type="submit">.
+User Story 2: Form Processing in the Servlet (Controller)
+As the system, I want to securely receive the submitted form data and save it to the database via the Core.
+• Acceptance Criteria:
+- [ ] The ThesisServlet overrides the doPost(HttpServletRequest req, HttpServletResponse resp) method.
+- [ ] The parameters are extracted using request.getParameter("...") (the string must exactly match the name attribute from the HTML form).
+- [ ] The score string is safely parsed into a Double using Double.parseDouble(). The parsing logic is wrapped in a try-catch block to handle NumberFormatException.
+- [ ] The ThesisService is called to save the data (e.g., thesisService.createThesis(...)).
+
+User Story 3: The PRG Pattern (Post-Redirect-Get)
+As a user, I do not want to accidentally create duplicate entries if I press F5 (Refresh) after saving a thesis.
+• Acceptance Criteria:
+- [ ] After successfully calling the create method in the service, the Servlet does not use RequestDispatcher.forward.
+- [ ] Instead, the Servlet calls response.sendRedirect("theses"); to force the browser to make a fresh, clean GET request.
+User Story 4: The Delete Action (Security)
+As a user, I want to delete a thesis by clicking a button, but without exposing the system to malicious GET requests.
+• Acceptance Criteria:
+- [ ] A new column is added to the HTML table for actions.
+- [ ] Inside this column, there is NO standard <a> link for deletion.
+- [ ] Instead, there is a mini HTML form for each row with method="POST" and action="delete-thesis".
+- [ ] This mini-form contains a hidden input field (<input type="hidden" name="thesisId" value="<%= t.getId() %>">) that securely transmits the ID to the server.
+Definition of Done (DoD): The Lab Checkout
+To officially close Sprint 09, demonstrate the following process to your Teaching Assistant
+(TA):
+1. The Create Test: Enter a new thesis via the web form and click "Save". Verify that it appears in the table immediately.
+2. The F5 Test: After saving, press F5 (Refresh) in your browser. Verify that the thesis is not duplicated in the table (proving your PRG pattern works).
+3. The Delete Test: Click the "Delete" button next to a thesis and verify it disappears from the table.
+4. The Ultimate Architecture Proof: Stop your Tomcat Server. Go to your Main.java from Week 6 and run your Swing Desktop GUI.
+- Verify: Are the changes you just made in the web browser visible in the Swing Desktop App- (If yes, congratulations! You have successfully mastered the Port & Adapters architecture by swapping primary adapters on the same core/database!)
+
+Starter-Kit (Code Skeletons to get started)
+1. Update for the View (theses.jsp)
+HTML
+<h3>Add a New Thesis</h3>
+<form action="theses" method="POST">
+<label for="title">Title:</label>
+<input type="text" id="title" name="title" required>
+<label for="score">Score:</label>
+<input type="number" step="0.1" id="score" name="score" required>
+<button type="submit">Save Thesis</button>
+</form>
+<hr>
+```
+**2. Update for the Controller (`ThesisServlet.java`)**
+```java
+@Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException { // 1. Extract form data from the Request // The strings must EXACTLY match the "name" attributes in your HTML!
+String title = request.getParameter("title");
+String scoreString = request.getParameter("score"); try {
+// 2. Convert data (Web data is always String!) double score = Double.parseDouble(scoreString); // 3. Call the Business Logic (Hexagonal Core) // Notice how our Core doesn't know anything about the Web! thesisService.createThesis(title, score); // 4. The PRG-Pattern: Redirect to the GET method!
+// This prevents duplicate submissions when the user presses F5. response.sendRedirect("theses"); } catch (NumberFormatException e) { // Error handling: If the user typed "ABC" instead of a number response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid Score format."); } catch (IllegalArgumentException e) { // Error handling: If our Core validation fails (e.g. empty title) response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+
+}
+}
+3. The Delete Mini-Form (Add this inside your JSP Table loop)
+HTML
+<td>
+<form action="delete-thesis" method="POST" style="display:inline;">
+<input type="hidden" name="thesisId" value="<%= t.getId() %>">
+<button type="submit" onclick="return confirm('Really delete this thesis-');">
+Delete
+</button>
+</form>
+</td> (Note: You will need to create a second Servlet mapped to @WebServlet("/delete-thesis") to handle this POST request!)

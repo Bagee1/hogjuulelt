@@ -1,0 +1,15 @@
+Lab 02: Agile Sprint "Creation Logic"
+Sprint Goal
+Establish a robust, thread-safe database access layer and a decoupled user management system.
+User Story 1: Global Access to Repository
+As a Developer, I want to implement a thread-safe Singleton for the ThesisRepository, So that concurrent threads don't create multiple database connections.
+• Acceptance Criteria:
+- [ ] The class cannot be instantiated from outside (private constructor).
+- [ ] Uses Double-Checked Locking with volatile.
+- [ ] Passes the testSingletonThreadSafety JUnit test in Eclipse.
+User Story 2: Decoupled User Creation
+As a System Architect, I want to use a Factory to create Student and Professor objects, So that my business logic only depends on the ThesisUser interface.
+• Acceptance Criteria:
+- [ ] ThesisUser interface is created.
+- [ ] UserFactory returns the interface type, not the concrete class.
+- [ ] No new keywords for Users are used in the main method.

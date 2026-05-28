@@ -1,0 +1,49 @@
+Sprint 15 Backlog: GitLab CI/CD
+Pipeline Setup
+Sprint Goal: Automate the integration and delivery process to ensure that only tested, compiling code is packaged into our Thesis Management Docker image.
+User Story
+As a Lead Developer, I want to establish a CI/CD pipeline in GitLab, So that every code commit is automatically compiled, tested (JUnit), and packaged without human intervention, maintaining high code quality.
+Task Board (To-Do)
+1. Pipeline Configuration: Create a .gitlab-ci.yml file in the project root.
+2. Define Stages: Set up three stages: test, build, and dockerize.
+3. Test Stage: Run mvn test to execute the Hexagonal Architecture Unit Tests (e.g., CreateThesisServiceTest).
+4. Build Stage: Run mvn package to generate the .war file and save it as a GitLab Pipeline Artifact.
+5. Dockerize Stage: Build the Docker image to ensure the Dockerfile is valid (Bonus:
+Push to GitLab Container Registry).
+Acceptance Criteria
+• [ ] Pushing code to the main branch automatically triggers the GitLab Pipeline.
+• [ ] If a student introduces a failing test (e.g., breaking the title validation in CreateThesisService), the pipeline fails at the test stage with a red cross .
+• [ ] A successful pipeline run produces a green checkmark and saves the .war file in the artifact repository.
+Starter Code: .gitlab-ci.yml
+YAML
+# Define the Docker image to use for the CI/CD runner image: maven:3.9-eclipse-temurin-17 # Define the sequence of pipeline stages
+stages:
+- test
+- build
+- dockerize # Caching Maven dependencies speeds up pipeline execution
+
+cache:
+paths:
+- .m2/repository # STAGE 1: Run JUnit Tests
+unit_testing:
+stage: test
+script:
+- echo "Running Hexagonal Architecture Domain & Use Case Tests..."
+- mvn clean test # STAGE 2: Build the Artifact
+package_application:
+stage: build
+script:
+- echo "Compiling the application and generating the .war file..."
+- mvn clean package -DskipTests
+artifacts:
+paths:
+- target/thesis-app.war expire_in: 1 week # STAGE 3: Verify Docker Build (Using Docker-in-Docker)
+build_docker_image:
+stage: dockerize image: docker:20.10.16
+services:
+- docker:20.10.16-dind
+variables:
+DOCKER_TLS_CERTDIR: "/certs"
+script:
+- echo "Building the Docker image to verify the Dockerfile..."
+- docker build -t thesis-management-app:latest .
