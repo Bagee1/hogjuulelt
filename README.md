@@ -63,6 +63,12 @@ Microservice даалгаврын шаардлагын checklist:
 room-booking-microservices/REQUIREMENTS_CHECKLIST.md
 ```
 
+Багшид тайлбарлах ерөнхий заавар:
+
+```text
+TEACHER_PRESENTATION_GUIDE.md
+```
+
 Төслийн setup болон Eclipse/Maven тайлбар:
 
 ```text
